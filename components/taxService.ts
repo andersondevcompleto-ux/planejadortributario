@@ -1,4 +1,4 @@
-import { CompanyData, SimulationResult, TaxRegime, CompanyType, ScenarioResult, ServiceCategory } from '../types';
+import { CompanyData, SimulationResult, TaxRegime, CompanyType, ScenarioResult, ServiceCategory } from './types';
 
 // Mock API response delay
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
