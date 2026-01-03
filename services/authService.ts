@@ -8,6 +8,7 @@ export interface UserAccount {
   name: string;
   email: string;
   password?: string;
+  confirmPassword?: string;
   createdAt: string;
 }
 
@@ -25,11 +26,19 @@ export class AuthService {
 
   /**
    * Registra um novo usuário.
-   * Valida se o e-mail já existe.
+   * Valida se o e-mail já existe e se as senhas coincidem.
    */
   register(userData: UserAccount): { success: boolean; message: string } {
-    if (!userData.email || !userData.password || !userData.name) {
+    if (!userData.email || !userData.password || !userData.name || !userData.confirmPassword) {
       return { success: false, message: 'Todos os campos são obrigatórios.' };
+    }
+
+    if (userData.password !== userData.confirmPassword) {
+      return { success: false, message: 'As senhas não coincidem.' };
+    }
+
+    if (userData.password.length < 6) {
+      return { success: false, message: 'A senha deve ter pelo menos 6 caracteres.' };
     }
 
     if (!userData.email.includes('@')) {
@@ -41,8 +50,11 @@ export class AuthService {
       return { success: false, message: 'Este e-mail já está em uso.' };
     }
 
+    // Remove confirmPassword before saving
+    const { confirmPassword: _, ...userToSave } = userData;
+    
     users.push({
-      ...userData,
+      ...userToSave,
       createdAt: new Date().toISOString()
     });
 
@@ -66,7 +78,7 @@ export class AuthService {
     }
 
     // Remove password for security before returning user object
-    const { password: _, ...safeUser } = user;
+    const { password: _, confirmPassword: __, ...safeUser } = user;
     return { success: true, user: safeUser as UserAccount, message: 'Login bem-sucedido!' };
   }
 }

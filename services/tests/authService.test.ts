@@ -20,11 +20,12 @@ describe('AuthService (TDD)', () => {
     authService = new AuthService();
   });
 
-  it('deve registrar um novo usuário com sucesso', () => {
+  it('deve registrar um novo usuário com sucesso quando as senhas coincidem', () => {
     const newUser: UserAccount = {
       name: 'João Silva',
       email: 'joao@teste.com',
       password: 'senha123',
+      confirmPassword: 'senha123',
       createdAt: ''
     };
 
@@ -33,11 +34,40 @@ describe('AuthService (TDD)', () => {
     expect(result.message).toBe('Conta criada com sucesso!');
   });
 
+  it('deve falhar no registro se as senhas forem diferentes', () => {
+    const newUser: UserAccount = {
+      name: 'João Silva',
+      email: 'joao@teste.com',
+      password: 'senha123',
+      confirmPassword: 'outra_senha',
+      createdAt: ''
+    };
+
+    const result = authService.register(newUser);
+    expect(result.success).toBe(false);
+    expect(result.message).toBe('As senhas não coincidem.');
+  });
+
+  it('deve falhar no registro se a senha for muito curta', () => {
+    const newUser: UserAccount = {
+      name: 'João Silva',
+      email: 'joao@teste.com',
+      password: '123',
+      confirmPassword: '123',
+      createdAt: ''
+    };
+
+    const result = authService.register(newUser);
+    expect(result.success).toBe(false);
+    expect(result.message).toBe('A senha deve ter pelo menos 6 caracteres.');
+  });
+
   it('não deve permitir registro com e-mail duplicado', () => {
     const user: UserAccount = {
       name: 'João Silva',
       email: 'joao@teste.com',
       password: 'senha123',
+      confirmPassword: 'senha123',
       createdAt: ''
     };
 
@@ -53,6 +83,7 @@ describe('AuthService (TDD)', () => {
       name: 'João Silva',
       email: 'joao@teste.com',
       password: 'senha123',
+      confirmPassword: 'senha123',
       createdAt: ''
     };
 
@@ -68,6 +99,7 @@ describe('AuthService (TDD)', () => {
       name: 'João Silva',
       email: 'joao@teste.com',
       password: 'senha123',
+      confirmPassword: 'senha123',
       createdAt: ''
     };
 

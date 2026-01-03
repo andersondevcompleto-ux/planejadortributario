@@ -54,8 +54,8 @@ import {
   ClipboardList,
   Wallet,
   Coins,
-  CreditCard,
   Target,
+  CreditCard,
   Info,
   AlertCircle
 } from 'lucide-angular';
@@ -245,11 +245,20 @@ registerLocaleData(localePt);
                   <input type="email" [(ngModel)]="authForm.email" placeholder="nome@empresa.com" class="w-full pl-12 p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-brand-500 transition-all">
                 </div>
               </div>
-              <div class="space-y-2">
-                <label class="text-xs font-bold text-slate-700 uppercase tracking-widest">Senha</label>
-                <div class="relative">
-                  <lucide-icon [name]="Lock" class="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400"></lucide-icon>
-                  <input type="password" [(ngModel)]="authForm.password" placeholder="Mínimo 6 caracteres" class="w-full pl-12 p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-brand-500 transition-all">
+              <div class="space-y-4">
+                <div class="space-y-2">
+                  <label class="text-xs font-bold text-slate-700 uppercase tracking-widest">Senha</label>
+                  <div class="relative">
+                    <lucide-icon [name]="Lock" class="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400"></lucide-icon>
+                    <input type="password" [(ngModel)]="authForm.password" placeholder="Mínimo 6 caracteres" class="w-full pl-12 p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-brand-500 transition-all">
+                  </div>
+                </div>
+                <div class="space-y-2">
+                  <label class="text-xs font-bold text-slate-700 uppercase tracking-widest">Confirmar Senha</label>
+                  <div class="relative">
+                    <lucide-icon [name]="ShieldCheck" class="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400"></lucide-icon>
+                    <input type="password" [(ngModel)]="authForm.confirmPassword" placeholder="Repita sua senha" class="w-full pl-12 p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-brand-500 transition-all">
+                  </div>
                 </div>
               </div>
               <button (click)="handleRegister()" [disabled]="isAuthenticating()" class="w-full bg-slate-900 text-white py-4 rounded-xl font-bold text-lg hover:bg-slate-800 transition-all shadow-lg flex items-center justify-center gap-2">
@@ -577,7 +586,7 @@ export class App implements OnInit {
   activeTab = signal<'overview' | 'ai' | 'profile'>('overview');
   
   // Auth State
-  authForm = { name: '', email: '', password: '' };
+  authForm = { name: '', email: '', password: '', confirmPassword: '' };
   isAuthenticating = signal(false);
   authError = signal<string | null>(null);
   currentUser = signal<any | null>(null);
@@ -669,6 +678,7 @@ export class App implements OnInit {
       name: this.authForm.name,
       email: this.authForm.email,
       password: this.authForm.password,
+      confirmPassword: this.authForm.confirmPassword,
       createdAt: ''
     });
 
@@ -687,7 +697,7 @@ export class App implements OnInit {
     this.currentUser.set(null);
     this.view.set('landing'); 
     this.simulations.set([]); 
-    this.authForm = { name: '', email: '', password: '' };
+    this.authForm = { name: '', email: '', password: '', confirmPassword: '' };
   }
 
   // --- ONBOARDING LOGIC ---
