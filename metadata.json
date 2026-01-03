@@ -1,5 +1,7 @@
 {
   "name": "TaxStrategist 2026",
-  "description": "Plataforma SaaS de inteligência tributária e simulação de cenários pós-reforma para empresas brasileiras.",
-  "requestFramePermissions": []
+  "description": "Plataforma SaaS de inteligência tributária e consultoria via IA com grounding em legislação federal.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
 }
