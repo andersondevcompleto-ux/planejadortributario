@@ -56,11 +56,13 @@ import {
   Coins,
   CreditCard,
   Target,
-  Info
+  Info,
+  AlertCircle
 } from 'lucide-angular';
 
 import { CompanyData, CompanyType, TaxRegime, ViewState, SimulationResult, CNAE, ServiceCategory } from './components/types';
 import { runSimulation, lookupCNPJ } from './components/taxService';
+import { AuthService } from './services/authService';
 
 registerLocaleData(localePt);
 
@@ -160,6 +162,107 @@ registerLocaleData(localePt);
             </div>
           </div>
         </main>
+      </div>
+
+      <!-- Login Screen -->
+      <div *ngSwitchCase="'login'" class="min-h-screen bg-slate-50 flex items-center justify-center p-6 animate-fade-in">
+        <div class="w-full max-w-md">
+          <div class="text-center mb-8">
+             <div (click)="view.set('landing')" class="inline-flex items-center gap-2 cursor-pointer mb-6 group">
+                <div class="bg-brand-600 p-1 rounded-lg group-hover:bg-brand-700 transition-colors"><lucide-icon [name]="BarChart2" class="h-5 w-5 text-white"></lucide-icon></div>
+                <span class="text-xl font-black text-slate-900">TaxStrategist</span>
+             </div>
+             <h2 class="text-3xl font-bold text-slate-900">Bem-vindo de volta</h2>
+             <p class="text-slate-500 mt-2">Entre para gerenciar suas análises fiscais.</p>
+          </div>
+          
+          <div class="bg-white p-8 rounded-[2rem] shadow-xl border border-slate-100">
+            <!-- Error Alert -->
+            <div *ngIf="authError()" class="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3 text-red-700 animate-fade-in">
+              <lucide-icon [name]="AlertCircle" class="h-5 w-5 shrink-0"></lucide-icon>
+              <span class="text-sm font-bold">{{ authError() }}</span>
+            </div>
+
+            <div class="space-y-4">
+              <div class="space-y-2">
+                <label class="text-xs font-bold text-slate-700 uppercase tracking-widest">E-mail</label>
+                <div class="relative">
+                  <lucide-icon [name]="Mail" class="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400"></lucide-icon>
+                  <input type="email" [(ngModel)]="authForm.email" placeholder="nome@empresa.com" class="w-full pl-12 p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-brand-500 transition-all">
+                </div>
+              </div>
+              <div class="space-y-2">
+                <label class="text-xs font-bold text-slate-700 uppercase tracking-widest">Senha</label>
+                <div class="relative">
+                  <lucide-icon [name]="Lock" class="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400"></lucide-icon>
+                  <input type="password" [(ngModel)]="authForm.password" placeholder="••••••••" class="w-full pl-12 p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-brand-500 transition-all">
+                </div>
+              </div>
+              <button (click)="handleLogin()" [disabled]="isAuthenticating()" class="w-full bg-brand-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/20 flex items-center justify-center gap-2">
+                <lucide-icon *ngIf="isAuthenticating()" [name]="Loader2" class="h-5 w-5 animate-spin"></lucide-icon>
+                Entrar
+              </button>
+            </div>
+
+            <div class="mt-8 text-center">
+              <p class="text-slate-500 text-sm">Não tem uma conta? <button (click)="view.set('register')" class="text-brand-600 font-bold hover:underline">Cadastre-se</button></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Register Screen -->
+      <div *ngSwitchCase="'register'" class="min-h-screen bg-slate-50 flex items-center justify-center p-6 animate-fade-in">
+        <div class="w-full max-w-md">
+          <div class="text-center mb-8">
+             <div (click)="view.set('landing')" class="inline-flex items-center gap-2 cursor-pointer mb-6 group">
+                <div class="bg-brand-600 p-1 rounded-lg group-hover:bg-brand-700 transition-colors"><lucide-icon [name]="BarChart2" class="h-5 w-5 text-white"></lucide-icon></div>
+                <span class="text-xl font-black text-slate-900">TaxStrategist</span>
+             </div>
+             <h2 class="text-3xl font-bold text-slate-900">Crie sua conta</h2>
+             <p class="text-slate-500 mt-2">Comece a economizar impostos hoje mesmo.</p>
+          </div>
+
+          <div class="bg-white p-8 rounded-[2rem] shadow-xl border border-slate-100">
+            <!-- Error Alert -->
+            <div *ngIf="authError()" class="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3 text-red-700 animate-fade-in">
+              <lucide-icon [name]="AlertCircle" class="h-5 w-5 shrink-0"></lucide-icon>
+              <span class="text-sm font-bold">{{ authError() }}</span>
+            </div>
+
+            <div class="space-y-4">
+              <div class="space-y-2">
+                <label class="text-xs font-bold text-slate-700 uppercase tracking-widest">Nome Completo</label>
+                <div class="relative">
+                  <lucide-icon [name]="User" class="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400"></lucide-icon>
+                  <input type="text" [(ngModel)]="authForm.name" placeholder="Ex: João da Silva" class="w-full pl-12 p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-brand-500 transition-all">
+                </div>
+              </div>
+              <div class="space-y-2">
+                <label class="text-xs font-bold text-slate-700 uppercase tracking-widest">E-mail Corporativo</label>
+                <div class="relative">
+                  <lucide-icon [name]="Mail" class="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400"></lucide-icon>
+                  <input type="email" [(ngModel)]="authForm.email" placeholder="nome@empresa.com" class="w-full pl-12 p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-brand-500 transition-all">
+                </div>
+              </div>
+              <div class="space-y-2">
+                <label class="text-xs font-bold text-slate-700 uppercase tracking-widest">Senha</label>
+                <div class="relative">
+                  <lucide-icon [name]="Lock" class="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400"></lucide-icon>
+                  <input type="password" [(ngModel)]="authForm.password" placeholder="Mínimo 6 caracteres" class="w-full pl-12 p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-brand-500 transition-all">
+                </div>
+              </div>
+              <button (click)="handleRegister()" [disabled]="isAuthenticating()" class="w-full bg-slate-900 text-white py-4 rounded-xl font-bold text-lg hover:bg-slate-800 transition-all shadow-lg flex items-center justify-center gap-2">
+                <lucide-icon *ngIf="isAuthenticating()" [name]="Loader2" class="h-5 w-5 animate-spin"></lucide-icon>
+                Criar Conta
+              </button>
+            </div>
+
+            <div class="mt-8 text-center">
+              <p class="text-slate-500 text-sm">Já tem uma conta? <button (click)="view.set('login')" class="text-brand-600 font-bold hover:underline">Faça login</button></p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- ONBOARDING -->
@@ -268,7 +371,7 @@ registerLocaleData(localePt);
               </div>
             </div>
 
-            <!-- Passo 2: Perfil Tributário (Automático via CNAE) -->
+            <!-- Passo 2: Perfil Tributário -->
             <div *ngIf="onboardingStep() === 2" class="space-y-8 animate-fade-in">
                <div>
                  <h3 class="text-2xl font-black text-slate-900 mb-2">Perfil Tributário</h3>
@@ -279,7 +382,6 @@ registerLocaleData(localePt);
                   <div class="bg-white p-3 rounded-2xl shadow-sm"><lucide-icon [name]="Info" class="text-brand-600 h-6 w-6"></lucide-icon></div>
                   <p class="text-sm text-brand-900 font-medium">
                     Atividade identificada como: <strong>{{ companyForm.type }}</strong>. 
-                    <br/><span class="text-xs text-brand-700 opacity-80">Regras de Anexos do Simples e ICMS/IPI serão aplicadas automaticamente.</span>
                   </p>
                </div>
 
@@ -313,7 +415,6 @@ registerLocaleData(localePt);
                     </div>
                   </div>
                   
-                  <!-- REDUÇÕES E EXCEÇÕES DE SERVIÇO (REFORMA 2026) -->
                   <div *ngIf="companyForm.type === 'Serviço'" class="pt-4 border-t border-slate-200 mt-4 space-y-4">
                      <div>
                        <label class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 block">Sub-categoria para Reforma 2026</label>
@@ -328,19 +429,6 @@ registerLocaleData(localePt);
                             <lucide-icon *ngIf="companyForm.serviceCategory === cat.value" [name]="CheckCircle" class="h-4 w-4"></lucide-icon>
                          </button>
                        </div>
-                     </div>
-
-                     <div *ngIf="companyForm.simplesAnexo === 'Anexo V'" class="flex items-center gap-3 pt-2 bg-white p-3 rounded-xl shadow-sm border border-brand-100 animate-fade-in">
-                        <input type="checkbox" id="fatorR" [(ngModel)]="companyForm.simplesFatorR" class="w-5 h-5 accent-brand-600 cursor-pointer">
-                        <label for="fatorR" class="text-sm font-bold text-slate-700 cursor-pointer select-none">Atividade sujeita ao Fator R?</label>
-                     </div>
-                  </div>
-
-                  <!-- INDÚSTRIA (IP/Harmful) -->
-                  <div *ngIf="companyForm.type === 'Indústria'" class="pt-4 border-t border-slate-200 mt-4 space-y-4">
-                     <div class="flex items-center gap-3 bg-white p-3 rounded-xl shadow-sm border border-red-100">
-                        <input type="checkbox" id="harmful" [(ngModel)]="companyForm.industryHarmfulProduct" class="w-5 h-5 accent-red-600 cursor-pointer">
-                        <label for="harmful" class="text-sm font-bold text-red-900 cursor-pointer select-none">Produto Nocivo? (Sujeito a Imposto Seletivo)</label>
                      </div>
                   </div>
                </div>
@@ -366,14 +454,14 @@ registerLocaleData(localePt);
                  <div class="space-y-2">
                    <label class="text-xs font-bold text-slate-500 uppercase tracking-widest">Faturamento Anual (R$)</label>
                    <div class="relative group">
-                     <lucide-icon [name]="Wallet" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 h-5 w-5 group-focus-within:text-brand-600"></lucide-icon>
+                     <lucide-icon [name]="Wallet" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 h-5 w-5 group-focus-within:text-brand-600 transition-colors"></lucide-icon>
                      <input type="number" [(ngModel)]="companyForm.annualRevenue" placeholder="0.00" class="w-full pl-12 p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-brand-500 text-lg font-bold">
                    </div>
                  </div>
                  <div class="space-y-2">
                    <label class="text-xs font-bold text-slate-500 uppercase tracking-widest">Custo de Folha Anual (R$)</label>
                    <div class="relative group">
-                     <lucide-icon [name]="Coins" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 h-5 w-5 group-focus-within:text-brand-600"></lucide-icon>
+                     <lucide-icon [name]="Coins" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 h-5 w-5 group-focus-within:text-brand-600 transition-colors"></lucide-icon>
                      <input type="number" [(ngModel)]="companyForm.payrollCosts" placeholder="0.00" class="w-full pl-12 p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-brand-500 text-lg font-bold">
                    </div>
                  </div>
@@ -402,18 +490,21 @@ registerLocaleData(localePt);
           <div class="flex gap-1 bg-slate-100 p-1 rounded-xl">
             <button (click)="activeTab.set('overview')" [class.bg-white]="activeTab() === 'overview'" class="text-xs font-bold px-4 py-2 rounded-lg transition-all">Análises</button>
             <button (click)="activeTab.set('ai')" [class.bg-white]="activeTab() === 'ai'" class="text-xs font-bold px-4 py-2 rounded-lg transition-all">IA Legislativa</button>
-            <button (click)="activeTab.set('profile')" [class.bg-white]="activeTab() === 'profile'" class="text-xs font-bold px-4 py-2 rounded-lg transition-all">Config</button>
+            <button (click)="activeTab.set('profile')" [class.bg-white]="activeTab() === 'profile'" class="text-xs font-bold px-4 py-2 rounded-lg transition-all">Perfil</button>
           </div>
-          <button (click)="handleLogout()" class="text-slate-500 font-bold text-sm">Sair</button>
+          <div class="flex items-center gap-4">
+             <span class="text-xs font-bold text-slate-500">{{ currentUser()?.name }}</span>
+             <button (click)="handleLogout()" class="text-slate-500 font-bold text-sm hover:text-red-600 transition-colors">Sair</button>
+          </div>
         </nav>
 
         <div class="max-w-7xl mx-auto p-8">
           <div *ngIf="activeTab() === 'overview'" class="space-y-8 animate-fade-in">
              <div *ngIf="simulations().length > 0; else emptyState">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  <div *ngFor="let sim of simulations()" class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all">
+                  <div *ngFor="let sim of simulations()" class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all group">
                      <div class="flex justify-between items-start mb-6">
-                        <div class="bg-brand-50 w-12 h-12 rounded-2xl flex items-center justify-center text-brand-600"><lucide-icon [name]="Building2" class="h-6 w-6"></lucide-icon></div>
+                        <div class="bg-brand-50 w-12 h-12 rounded-2xl flex items-center justify-center text-brand-600 group-hover:bg-brand-600 group-hover:text-white transition-all"><lucide-icon [name]="Building2" class="h-6 w-6"></lucide-icon></div>
                         <span class="text-[10px] px-2 py-1 rounded-full bg-slate-900 text-white font-black uppercase">{{ sim.currentRegime }}</span>
                      </div>
                      <h4 class="font-black text-slate-900 text-lg mb-2 truncate">{{ sim.name }}</h4>
@@ -428,8 +519,8 @@ registerLocaleData(localePt);
 
                      <div class="pt-6 border-t border-slate-50 flex justify-between items-center">
                         <div class="flex flex-col">
-                           <span class="text-[8px] font-bold text-slate-400 uppercase">Projeção Mensal</span>
-                           <span class="text-brand-600 font-black">R$ {{ (sim.annualRevenue / 12) * 0.1 | number:'1.2-2' }} (Est.)</span>
+                           <span class="text-[8px] font-bold text-slate-400 uppercase">Faturamento Anual</span>
+                           <span class="text-brand-600 font-black">R$ {{ sim.annualRevenue | number:'1.2-2' }}</span>
                         </div>
                         <button class="bg-slate-100 text-slate-400 p-2 rounded-xl hover:bg-brand-600 hover:text-white transition-all"><lucide-icon [name]="ChevronRight" class="h-5 w-5"></lucide-icon></button>
                      </div>
@@ -445,6 +536,32 @@ registerLocaleData(localePt);
                 </div>
              </ng-template>
           </div>
+
+          <!-- Aba Perfil -->
+          <div *ngIf="activeTab() === 'profile'" class="animate-fade-in max-w-2xl mx-auto">
+             <div class="bg-white rounded-[2.5rem] border border-slate-100 p-10 shadow-sm">
+                <div class="flex items-center gap-6 mb-10">
+                   <div class="bg-brand-600 w-20 h-20 rounded-3xl flex items-center justify-center text-white text-3xl font-black">
+                      {{ currentUser()?.name?.charAt(0) }}
+                   </div>
+                   <div>
+                      <h2 class="text-2xl font-black text-slate-900">{{ currentUser()?.name }}</h2>
+                      <p class="text-slate-500 font-medium">{{ currentUser()?.email }}</p>
+                   </div>
+                </div>
+
+                <div class="space-y-6">
+                   <div class="p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                      <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Membro desde</span>
+                      <span class="font-bold text-slate-700">{{ currentUser()?.createdAt | date:'shortDate':'':'pt-BR' }}</span>
+                   </div>
+                   <button class="w-full p-4 border-2 border-slate-100 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 transition-all">Alterar Senha</button>
+                   <button (click)="handleLogout()" class="w-full p-4 border-2 border-red-50 text-red-500 rounded-2xl font-bold hover:bg-red-50 transition-all flex items-center justify-center gap-2">
+                      <lucide-icon [name]="LogOut" class="h-5 w-5"></lucide-icon> Encerrar Sessão
+                   </button>
+                </div>
+             </div>
+          </div>
         </div>
       </div>
     </div>
@@ -459,9 +576,14 @@ export class App implements OnInit {
   view = signal<ViewState>('landing');
   activeTab = signal<'overview' | 'ai' | 'profile'>('overview');
   
+  // Auth State
   authForm = { name: '', email: '', password: '' };
-  profileForm = { name: '' };
+  isAuthenticating = signal(false);
+  authError = signal<string | null>(null);
+  currentUser = signal<any | null>(null);
+  private authService = new AuthService();
 
+  // Onboarding
   onboardingStep = signal(1);
   isSearchingCNPJ = signal(false);
   allFetchedCnaes = signal<CNAE[]>([]);
@@ -511,9 +633,64 @@ export class App implements OnInit {
   Shield = Shield; MailCheck = MailCheck; DollarSign = DollarSign; PieChart = PieChart;
   ArrowLeft = ArrowLeft; MapPin = MapPin; ClipboardList = ClipboardList;
   Wallet = Wallet; Coins = Coins; Target = Target; CreditCard = CreditCard; Info = Info;
+  AlertCircle = AlertCircle;
 
-  ngOnInit() {}
+  ngOnInit() {
+    this.authError.set(null);
+  }
 
+  // --- AUTH LOGIC ---
+  async handleLogin() {
+    this.authError.set(null);
+    this.isAuthenticating.set(true);
+
+    // Simula latência de rede
+    await new Promise(r => setTimeout(r, 800));
+
+    const result = this.authService.login(this.authForm.email, this.authForm.password);
+    
+    if (result.success) {
+      this.currentUser.set(result.user);
+      this.view.set('dashboard');
+    } else {
+      this.authError.set(result.message);
+    }
+    this.isAuthenticating.set(false);
+  }
+
+  async handleRegister() {
+    this.authError.set(null);
+    this.isAuthenticating.set(true);
+
+    // Simula latência de rede
+    await new Promise(r => setTimeout(r, 1200));
+
+    const result = this.authService.register({
+      name: this.authForm.name,
+      email: this.authForm.email,
+      password: this.authForm.password,
+      createdAt: ''
+    });
+
+    if (result.success) {
+      // Auto-login após registro
+      const loginResult = this.authService.login(this.authForm.email, this.authForm.password);
+      this.currentUser.set(loginResult.user);
+      this.view.set('onboarding');
+    } else {
+      this.authError.set(result.message);
+    }
+    this.isAuthenticating.set(false);
+  }
+
+  handleLogout() { 
+    this.currentUser.set(null);
+    this.view.set('landing'); 
+    this.simulations.set([]); 
+    this.authForm = { name: '', email: '', password: '' };
+  }
+
+  // --- ONBOARDING LOGIC ---
   getAvailableAnnexes(): string[] {
     const type = this.companyForm.type;
     if (type === CompanyType.Comercio) return ['Anexo I'];
@@ -539,10 +716,6 @@ export class App implements OnInit {
     }
     if (this.companyForm.simplesAnexo !== 'Anexo V') this.companyForm.simplesFatorR = false;
   }
-
-  handleLogin() { this.view.set('dashboard'); }
-  handleRegister() { this.view.set('onboarding'); }
-  handleLogout() { this.view.set('landing'); this.simulations.set([]); }
 
   startNewSimulation() {
     this.companyForm = { ...this.companyForm, cnpj: '', name: '', selectedCnae: null, annualRevenue: 0 };
@@ -577,6 +750,7 @@ export class App implements OnInit {
     } as any;
     this.simulations.update(list => [...list, newCompany]);
     this.view.set('dashboard');
+    this.activeTab.set('overview');
   }
 }
 
