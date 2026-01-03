@@ -1,3 +1,4 @@
+
 import '@angular/compiler';
 import 'zone.js';
 import { bootstrapApplication } from '@angular/platform-browser';
@@ -180,6 +181,8 @@ registerLocaleData(localePt);
       <!-- ONBOARDING -->
       <div *ngSwitchCase="'onboarding'" class="bg-slate-50 min-h-screen flex items-center justify-center p-6 animate-fade-in">
         <div class="max-w-2xl w-full bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-slate-100">
+          
+          <!-- Stepper Header -->
           <div class="bg-slate-900 p-8 text-white relative">
             <div class="flex justify-between items-center mb-6">
               <div class="flex items-center gap-2">
@@ -192,18 +195,155 @@ registerLocaleData(localePt);
                <div class="h-full bg-brand-500 transition-all duration-500" [style.width.%]="(onboardingStep() / 3) * 100"></div>
             </div>
           </div>
+
           <div class="p-10">
-            <div *ngIf="onboardingStep() === 1" class="space-y-8">
-              <h3 class="text-2xl font-black text-slate-900">Qual o CNPJ da empresa?</h3>
+            <!-- Passo 1: Identificação -->
+            <div *ngIf="onboardingStep() === 1" class="space-y-8 animate-fade-in">
+              <div>
+                <h3 class="text-2xl font-black text-slate-900 mb-2">Qual o CNPJ da empresa?</h3>
+                <p class="text-slate-500">Buscaremos os dados oficiais na base da Receita Federal.</p>
+              </div>
+
               <div class="relative">
-                <input type="text" [(ngModel)]="companyForm.cnpj" placeholder="00.000.000/0000-00" class="w-full pl-12 p-5 bg-slate-50 border rounded-2xl text-xl outline-none focus:ring-2 focus:ring-brand-500">
-                <button (click)="searchCNPJ()" class="absolute right-2 top-2 bottom-2 bg-slate-900 text-white px-6 rounded-xl font-bold">Consultar</button>
+                <lucide-icon [name]="Search" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 h-5 w-5"></lucide-icon>
+                <input 
+                  type="text" 
+                  [(ngModel)]="companyForm.cnpj" 
+                  placeholder="00.000.000/0000-00" 
+                  class="w-full pl-12 pr-32 py-5 bg-slate-50 border border-slate-200 rounded-2xl text-xl font-medium outline-none focus:ring-2 focus:ring-brand-500">
+                <button 
+                  (click)="searchCNPJ()" 
+                  [disabled]="isSearchingCNPJ()"
+                  class="absolute right-2 top-2 bottom-2 bg-slate-900 text-white px-6 rounded-xl font-bold flex items-center gap-2">
+                  <lucide-icon *ngIf="isSearchingCNPJ()" [name]="Loader2" class="animate-spin h-4 w-4"></lucide-icon>
+                  Consultar
+                </button>
               </div>
-              <div *ngIf="companyForm.name" class="p-6 bg-brand-50 rounded-2xl border border-brand-100">
-                <h4 class="font-black text-slate-900">{{ companyForm.name }}</h4>
-                <p class="text-sm text-slate-500">{{ companyForm.municipality }} - {{ companyForm.state }}</p>
-                <button (click)="nextStep()" class="mt-4 bg-brand-600 text-white px-8 py-3 rounded-xl font-bold">Confirmar</button>
+
+              <div *ngIf="companyForm.name" class="p-6 bg-brand-50 rounded-2xl border border-brand-100 animate-fade-in">
+                <div class="flex items-center gap-4">
+                  <div class="bg-white p-3 rounded-xl shadow-sm"><lucide-icon [name]="CheckCircle" class="text-brand-600 h-6 w-6"></lucide-icon></div>
+                  <div>
+                    <h4 class="font-black text-slate-900">{{ companyForm.name }}</h4>
+                    <p class="text-sm text-slate-500">{{ companyForm.municipality }} - {{ companyForm.state }}</p>
+                  </div>
+                </div>
               </div>
+
+              <div class="flex justify-end pt-4">
+                <button 
+                  (click)="nextStep()" 
+                  [disabled]="!companyForm.name"
+                  class="bg-brand-600 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-xl shadow-brand-500/20 hover:scale-105 transition-all flex items-center gap-2 disabled:opacity-50">
+                  Próximo Passo <lucide-icon [name]="ArrowRight" class="h-5 w-5"></lucide-icon>
+                </button>
+              </div>
+            </div>
+
+            <!-- Passo 2: Perfil e Regime -->
+            <div *ngIf="onboardingStep() === 2" class="space-y-8 animate-fade-in">
+               <div>
+                 <h3 class="text-2xl font-black text-slate-900 mb-2">Perfil de Negócio</h3>
+                 <p class="text-slate-500">Como a empresa opera hoje?</p>
+               </div>
+
+               <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <button 
+                    *ngFor="let type of companyTypes" 
+                    (click)="companyForm.type = type.value"
+                    [class.border-brand-600]="companyForm.type === type.value"
+                    [class.bg-brand-50]="companyForm.type === type.value"
+                    class="p-6 border-2 border-slate-100 rounded-3xl text-left hover:border-brand-200 transition-all group">
+                    <lucide-icon [name]="type.icon" class="h-8 w-8 text-slate-400 mb-4 group-hover:text-brand-600 transition-colors" [class.text-brand-600]="companyForm.type === type.value"></lucide-icon>
+                    <span class="block font-black text-slate-900">{{ type.label }}</span>
+                  </button>
+               </div>
+
+               <div class="space-y-4">
+                  <label class="text-sm font-bold text-slate-700 uppercase tracking-widest">Regime Tributário Atual</label>
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <button 
+                      *ngFor="let regime of regimes" 
+                      (click)="companyForm.currentRegime = regime"
+                      [class.bg-slate-900]="companyForm.currentRegime === regime"
+                      [class.text-white]="companyForm.currentRegime === regime"
+                      class="px-4 py-3 border rounded-xl text-sm font-bold hover:bg-slate-50 transition-all">
+                      {{ regime }}
+                    </button>
+                  </div>
+               </div>
+
+               <!-- OPÇÕES ESPECÍFICAS SIMPLES NACIONAL -->
+               <div *ngIf="companyForm.currentRegime === 'Simples Nacional'" class="space-y-4 animate-fade-in p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                  <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 block">Selecione o Anexo</label>
+                    <div class="flex flex-wrap gap-2">
+                      <button 
+                        *ngFor="let anexo of ['Anexo I', 'Anexo II', 'Anexo III', 'Anexo IV', 'Anexo V']"
+                        (click)="companyForm.simplesAnexo = anexo"
+                        [class.bg-brand-600]="companyForm.simplesAnexo === anexo"
+                        [class.text-white]="companyForm.simplesAnexo === anexo"
+                        class="px-4 py-2 border rounded-xl text-xs font-bold transition-all shadow-sm">
+                        {{ anexo }}
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div *ngIf="companyForm.simplesAnexo === 'Anexo V'" class="flex items-center gap-3 pt-2 bg-white p-3 rounded-xl shadow-sm border border-brand-100">
+                    <input type="checkbox" [(ngModel)]="companyForm.simplesFatorR" class="w-5 h-5 accent-brand-600 cursor-pointer">
+                    <label class="text-sm font-bold text-slate-700 cursor-pointer">Sujeito ao Fator R? (Pode reduzir para Anexo III)</label>
+                  </div>
+               </div>
+
+               <div class="flex justify-between pt-4">
+                  <button (click)="prevStep()" class="text-slate-500 font-bold hover:text-slate-900 transition-all flex items-center gap-2">
+                    <lucide-icon [name]="ArrowLeft" class="h-4 w-4"></lucide-icon> Voltar
+                  </button>
+                  <button (click)="nextStep()" class="bg-brand-600 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-xl shadow-brand-500/20 hover:scale-105 transition-all flex items-center gap-2">
+                    Finanças <lucide-icon [name]="ArrowRight" class="h-5 w-5"></lucide-icon>
+                  </button>
+               </div>
+            </div>
+
+            <!-- Passo 3: Dados Financeiros -->
+            <div *ngIf="onboardingStep() === 3" class="space-y-8 animate-fade-in">
+               <div>
+                 <h3 class="text-2xl font-black text-slate-900 mb-2">Dados Financeiros</h3>
+                 <p class="text-slate-500">Valores anuais estimados para simulação.</p>
+               </div>
+
+               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <div class="space-y-2">
+                   <label class="text-xs font-bold text-slate-500 uppercase tracking-widest">Faturamento Anual (R$)</label>
+                   <div class="relative">
+                     <lucide-icon [name]="DollarSign" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 h-5 w-5"></lucide-icon>
+                     <input type="number" [(ngModel)]="companyForm.annualRevenue" class="w-full pl-12 p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-brand-500">
+                   </div>
+                 </div>
+                 <div class="space-y-2">
+                   <label class="text-xs font-bold text-slate-500 uppercase tracking-widest">Custo de Folha Anual (R$)</label>
+                   <div class="relative">
+                     <lucide-icon [name]="User" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 h-5 w-5"></lucide-icon>
+                     <input type="number" [(ngModel)]="companyForm.payrollCosts" class="w-full pl-12 p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-brand-500">
+                   </div>
+                 </div>
+               </div>
+
+               <div class="bg-brand-50 p-6 rounded-3xl flex items-center gap-4">
+                  <lucide-icon [name]="Sparkles" class="text-brand-600 h-10 w-10"></lucide-icon>
+                  <p class="text-sm text-brand-900 leading-relaxed">
+                    Estamos quase lá! Com esses dados, nossa IA calculará sua economia no <strong>Simples, Lucro Presumido</strong> e na <strong>Reforma Tributária 2026</strong>.
+                  </p>
+               </div>
+
+               <div class="flex justify-between pt-4">
+                  <button (click)="prevStep()" class="text-slate-500 font-bold hover:text-slate-900 transition-all flex items-center gap-2">
+                    <lucide-icon [name]="ArrowLeft" class="h-4 w-4"></lucide-icon> Voltar
+                  </button>
+                  <button (click)="finishOnboarding()" [disabled]="!companyForm.annualRevenue" class="bg-brand-600 text-white px-10 py-5 rounded-2xl font-black text-xl shadow-2xl shadow-brand-500/40 hover:scale-105 transition-all flex items-center gap-3">
+                    Gerar Inteligência <lucide-icon [name]="PieChart" class="h-6 w-6"></lucide-icon>
+                  </button>
+               </div>
             </div>
           </div>
         </div>
@@ -229,19 +369,34 @@ registerLocaleData(localePt);
           <!-- Aba de Simulações -->
           <div *ngIf="activeTab() === 'overview'" class="space-y-8 animate-fade-in">
              <div *ngIf="simulations().length > 0; else emptyState">
+                <div class="flex justify-between items-center mb-6">
+                   <h1 class="text-3xl font-black text-slate-900">Inteligência Fiscal</h1>
+                   <button (click)="startNewSimulation()" class="bg-brand-600 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-brand-500/20">
+                     <lucide-icon [name]="Plus" class="h-4 w-4"></lucide-icon> Nova Simulação
+                   </button>
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <div *ngFor="let sim of simulations()" class="bg-white p-6 rounded-3xl border shadow-sm">
-                     <div class="bg-brand-50 w-10 h-10 rounded-xl flex items-center justify-center mb-4"><lucide-icon [name]="Building2" class="h-5 w-5"></lucide-icon></div>
-                     <h4 class="font-bold text-slate-800">{{ sim.name }}</h4>
-                     <p class="text-xs text-slate-400">{{ sim.cnpj }}</p>
+                  <div *ngFor="let sim of simulations()" class="bg-white p-6 rounded-3xl border shadow-sm hover:border-brand-200 transition-all cursor-pointer group">
+                     <div class="bg-brand-50 w-10 h-10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-brand-600 group-hover:text-white transition-all"><lucide-icon [name]="Building2" class="h-5 w-5"></lucide-icon></div>
+                     <h4 class="font-bold text-slate-800 leading-tight">{{ sim.name }}</h4>
+                     <p class="text-xs text-slate-400 mt-1">{{ sim.cnpj }}</p>
+                     <div class="mt-4 pt-4 border-t flex justify-between items-center">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase">Regime</span>
+                        <span class="text-[10px] font-black text-brand-600">{{ sim.currentRegime }}</span>
+                     </div>
                   </div>
                 </div>
              </div>
              <ng-template #emptyState>
-                <div class="text-center py-20 bg-white rounded-[3rem] border">
-                  <lucide-icon [name]="Building2" class="h-16 w-16 text-slate-200 mx-auto mb-4"></lucide-icon>
-                  <h2 class="text-2xl font-black mb-4">Inicie sua inteligência fiscal</h2>
-                  <button (click)="startNewSimulation()" class="bg-brand-600 text-white px-8 py-4 rounded-2xl font-bold">Cadastrar Empresa</button>
+                <div class="text-center py-20 bg-white rounded-[3rem] border shadow-2xl shadow-slate-200/50 max-w-2xl mx-auto">
+                  <div class="bg-brand-50 w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto mb-8">
+                    <lucide-icon [name]="Building2" class="h-10 w-10 text-brand-600"></lucide-icon>
+                  </div>
+                  <h2 class="text-3xl font-black mb-4">Inicie sua inteligência fiscal</h2>
+                  <p class="text-slate-500 mb-10 max-w-sm mx-auto">Configure sua primeira empresa para ver o comparativo detalhado da Reforma Tributária.</p>
+                  <button (click)="startNewSimulation()" class="bg-brand-600 text-white px-10 py-5 rounded-2xl font-black text-xl shadow-xl hover:scale-105 transition-all">
+                    Começar Agora
+                  </button>
                 </div>
              </ng-template>
           </div>
@@ -431,6 +586,8 @@ export class App implements OnInit {
     state: '',
     type: CompanyType.Servico,
     currentRegime: TaxRegime.Simples,
+    simplesAnexo: 'Anexo III',
+    simplesFatorR: false,
     annualRevenue: 0,
     payrollCosts: 0
   };
@@ -502,6 +659,8 @@ export class App implements OnInit {
       state: '',
       type: CompanyType.Servico,
       currentRegime: TaxRegime.Simples,
+      simplesAnexo: 'Anexo III',
+      simplesFatorR: false,
       annualRevenue: 0,
       payrollCosts: 0
     };
@@ -518,6 +677,11 @@ export class App implements OnInit {
   }
 
   async searchCNPJ() {
+    if (!this.companyForm.cnpj || this.companyForm.cnpj.length < 11) {
+        alert('Por favor, insira um CNPJ válido.');
+        return;
+    }
+    
     this.isSearchingCNPJ.set(true);
     try {
       const data = await lookupCNPJ(this.companyForm.cnpj);
@@ -525,7 +689,7 @@ export class App implements OnInit {
       this.companyForm.municipality = data.municipality;
       this.companyForm.state = data.state;
     } catch (err) {
-      alert('Erro ao buscar CNPJ. Tente novamente.');
+      alert('Erro ao buscar CNPJ. Verifique a conexão e tente novamente.');
     } finally {
       this.isSearchingCNPJ.set(false);
     }
@@ -540,6 +704,8 @@ export class App implements OnInit {
       state: this.companyForm.state,
       type: this.companyForm.type,
       currentRegime: this.companyForm.currentRegime,
+      simplesAnexo: this.companyForm.simplesAnexo,
+      simplesFatorR: this.companyForm.simplesFatorR,
       annualRevenue: this.companyForm.annualRevenue,
       payrollCosts: this.companyForm.payrollCosts,
       cnae: '6201-5/00',
