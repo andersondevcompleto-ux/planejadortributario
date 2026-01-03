@@ -1,4 +1,3 @@
-
 export type Language = 'pt' | 'en';
 
 export enum TaxRegime {
@@ -137,4 +136,4 @@ export interface HistoryEntry {
   timestamp: Date;
 }
 
-export type ViewState = 'landing' | 'login' | 'register' | 'onboarding' | 'dashboard' | 'pricing';
+export type ViewState = 'landing' | 'login' | 'register' | 'onboarding' | 'dashboard' | 'pricing' | 'tests';

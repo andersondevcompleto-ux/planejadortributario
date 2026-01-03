@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
-import { CompanyData, SimulationResult } from '../types';
+import { CompanyData, SimulationResult } from '../components/types';
 
 export const generatePDF = (company: CompanyData, result: SimulationResult) => {
   const doc = new jsPDF();

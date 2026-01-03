@@ -1,20 +1,30 @@
+
 {
-  "name": "taxstrategist-2026",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "name": "tax-strategist-2026-angular",
+  "version": "1.0.0",
+  "description": "Plataforma SaaS de inteligência tributária em Angular",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "build": "node build.js",
+    "dev": "node build.js --watch"
   },
   "dependencies": {
-
+    "@angular/animations": "^19.0.0",
+    "@angular/common": "^19.0.0",
+    "@angular/compiler": "^19.0.0",
+    "@angular/core": "^19.0.0",
+    "@angular/forms": "^19.0.0",
+    "@angular/platform-browser": "^19.0.0",
+    "@angular/platform-browser-dynamic": "^19.0.0",
+    "rxjs": "^7.8.1",
+    "zone.js": "~0.15.0",
+    "lucide-angular": "^0.473.0",
+    "jspdf": "^2.5.1",
+    "jspdf-autotable": "^3.8.2",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
-    
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "esbuild": "^0.21.4",
+    "typescript": "^5.5.0",
+    "@types/node": "^20.12.12"
   }
 }

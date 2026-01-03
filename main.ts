@@ -1,0 +1,1 @@
+// Removido - Funcionalidade migrada para index.ts
