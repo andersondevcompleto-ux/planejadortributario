@@ -10,6 +10,40 @@ export const ICMS_RATES: Record<string, number> = {
   'SE': 19, 'SP': 18, 'TO': 20
 };
 
+/**
+ * Mapeia prefixos de CNAE para Anexos do Simples Nacional.
+ * Baseado na Lei Complementar 123/2006.
+ */
+export const getSimplesAnexoForCNAE = (code: string): { anexo: string; subjectToFactorR: boolean } => {
+  const cleanCode = code.replace(/\D/g, '');
+  const prefix2 = parseInt(cleanCode.substring(0, 2));
+  
+  // Comércio
+  if (prefix2 >= 45 && prefix2 <= 47) {
+    return { anexo: 'Anexo I', subjectToFactorR: false };
+  }
+  
+  // Indústria
+  if (prefix2 >= 10 && prefix2 <= 33) {
+    return { anexo: 'Anexo II', subjectToFactorR: false };
+  }
+
+  // Serviços Intelectuais/Tech (Geralmente Anexo V ou III pelo Fator R)
+  // Ex: TI (6201), Consultoria (7020), Engenharia (7112)
+  const intelPrefixes = [62, 70, 71, 73, 74, 85, 86];
+  if (intelPrefixes.includes(prefix2)) {
+    // Casos específicos de Anexo IV (Ex: Limpeza, Vigilância, Advocacia)
+    const prefix4 = parseInt(cleanCode.substring(0, 4));
+    if ([8121, 8011, 6911].includes(prefix4)) {
+      return { anexo: 'Anexo IV', subjectToFactorR: false };
+    }
+    return { anexo: 'Anexo V', subjectToFactorR: true };
+  }
+
+  // Serviços Gerais
+  return { anexo: 'Anexo III', subjectToFactorR: false };
+};
+
 // Helper para inferir tipo de empresa pelo código CNAE
 const inferTypeFromCNAE = (code: string): CompanyType => {
   const prefix = parseInt(code.substring(0, 2));

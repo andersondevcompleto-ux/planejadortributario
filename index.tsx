@@ -61,7 +61,7 @@ import {
 } from 'lucide-angular';
 
 import { CompanyData, CompanyType, TaxRegime, ViewState, SimulationResult, CNAE, ServiceCategory } from './components/types';
-import { runSimulation, lookupCNPJ } from './components/taxService';
+import { runSimulation, lookupCNPJ, getSimplesAnexoForCNAE } from './components/taxService';
 import { AuthService } from './services/authService';
 
 registerLocaleData(localePt);
@@ -410,17 +410,27 @@ registerLocaleData(localePt);
 
                <!-- OPÇÕES ESPECÍFICAS SIMPLES NACIONAL -->
                <div *ngIf="companyForm.currentRegime === 'Simples Nacional'" class="space-y-4 animate-fade-in p-6 bg-slate-50 rounded-3xl border border-slate-100">
-                  <div>
-                    <label class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 block">Enquadramento de Anexo Sugerido</label>
-                    <div class="flex flex-wrap gap-2">
-                      <button 
-                        *ngFor="let anexo of getAvailableAnnexes()"
-                        (click)="companyForm.simplesAnexo = anexo"
-                        [class.bg-brand-600]="companyForm.simplesAnexo === anexo"
-                        [class.text-white]="companyForm.simplesAnexo === anexo"
-                        class="px-4 py-2 border rounded-xl text-xs font-bold transition-all shadow-sm">
-                        {{ anexo }}
-                      </button>
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <label class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 block">Enquadramento de Anexo Sugerido</label>
+                      <div class="flex flex-wrap gap-2">
+                        <button 
+                          *ngFor="let anexo of getAvailableAnnexes()"
+                          (click)="companyForm.simplesAnexo = anexo"
+                          [class.bg-brand-600]="companyForm.simplesAnexo === anexo"
+                          [class.text-white]="companyForm.simplesAnexo === anexo"
+                          class="px-4 py-2 border rounded-xl text-xs font-bold transition-all shadow-sm">
+                          {{ anexo }}
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div *ngIf="companyForm.simplesAnexo === 'Anexo V'" class="flex flex-col items-end gap-2 p-3 bg-brand-50 rounded-2xl border border-brand-100">
+                       <span class="text-[10px] font-black text-brand-700 uppercase">Sugestão de Fator R</span>
+                       <div class="flex items-center gap-2">
+                         <input type="checkbox" id="fatorR" [(ngModel)]="companyForm.simplesFatorR" class="w-5 h-5 accent-brand-600 cursor-pointer">
+                         <label for="fatorR" class="text-xs font-bold text-slate-700 cursor-pointer">Ativo</label>
+                       </div>
                     </div>
                   </div>
                   
@@ -716,6 +726,12 @@ export class App implements OnInit {
   selectCnae(cnae: CNAE) {
     this.companyForm.selectedCnae = cnae;
     this.companyForm.type = cnae.type;
+    
+    // Identificação Automática de Anexo e Fator R
+    const suggestions = getSimplesAnexoForCNAE(cnae.code);
+    this.companyForm.simplesAnexo = suggestions.anexo;
+    this.companyForm.simplesFatorR = suggestions.subjectToFactorR;
+
     this.ensureValidAnnex();
   }
 
@@ -724,6 +740,7 @@ export class App implements OnInit {
     if (!available.includes(this.companyForm.simplesAnexo)) {
       this.companyForm.simplesAnexo = available[0];
     }
+    // Se não for Anexo V, desliga fator R por segurança se a lógica de mapeamento for estrita
     if (this.companyForm.simplesAnexo !== 'Anexo V') this.companyForm.simplesFatorR = false;
   }
 

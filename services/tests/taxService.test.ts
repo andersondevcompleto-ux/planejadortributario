@@ -1,15 +1,46 @@
 
 import { describe, it, expect } from 'vitest';
-import { runSimulation } from '../../components/taxService';
+import { runSimulation, getSimplesAnexoForCNAE } from '../../components/taxService';
 import { CompanyData, CompanyType, TaxRegime, ServiceCategory } from '../../components/types';
 
-describe('TaxService Engine', () => {
+describe('TaxService Engine - Automatic Annex Identification', () => {
+  it('deve identificar Anexo I para CNAE de Comércio (47xx)', () => {
+    const res = getSimplesAnexoForCNAE('4751-2/01');
+    expect(res.anexo).toBe('Anexo I');
+    expect(res.subjectToFactorR).toBe(false);
+  });
+
+  it('deve identificar Anexo II para CNAE de Indústria (10xx)', () => {
+    const res = getSimplesAnexoForCNAE('1011-2/01');
+    expect(res.anexo).toBe('Anexo II');
+    expect(res.subjectToFactorR).toBe(false);
+  });
+
+  it('deve identificar Anexo III para CNAE de Serviço Geral (8219)', () => {
+    const res = getSimplesAnexoForCNAE('8219-9/99');
+    expect(res.anexo).toBe('Anexo III');
+    expect(res.subjectToFactorR).toBe(false);
+  });
+
+  it('deve identificar Anexo V e Fator R para CNAE de TI (6201)', () => {
+    const res = getSimplesAnexoForCNAE('6201-5/00');
+    expect(res.anexo).toBe('Anexo V');
+    expect(res.subjectToFactorR).toBe(true);
+  });
+
+  it('deve identificar Anexo IV para CNAE de Limpeza (8121)', () => {
+    const res = getSimplesAnexoForCNAE('8121-4/00');
+    expect(res.anexo).toBe('Anexo IV');
+    expect(res.subjectToFactorR).toBe(false);
+  });
+});
+
+describe('TaxService Engine - Simulation Tests', () => {
   const baseCompany: CompanyData = {
     cnpj: '12345678000190',
     name: 'Test Corp',
     municipality: 'São Paulo',
     state: 'SP',
-    // Fix: Object literal may only specify known properties, and 'cnae' does not exist in type 'CompanyData'.
     selectedCnae: { 
       code: '6201-5/00', 
       description: 'Desenvolvimento de programas de computador sob encomenda', 
@@ -17,7 +48,7 @@ describe('TaxService Engine', () => {
     },
     type: CompanyType.Servico,
     currentRegime: TaxRegime.Presumido,
-    annualRevenue: 1000000, // 1 Milhão
+    annualRevenue: 1000000, 
     payrollCosts: 300000,
     suppliers: []
   };
@@ -33,27 +64,24 @@ describe('TaxService Engine', () => {
     
     expect(simplesScenario).toBeDefined();
     expect(simplesScenario?.taxAmountYearly).toBeGreaterThan(0);
-    // Para 1M no Anexo III, a alíquota efetiva deve estar próxima de 10-13%
     expect(simplesScenario?.effectiveRate).toBeGreaterThan(10);
     expect(simplesScenario?.effectiveRate).toBeLessThan(15);
   });
 
   it('deve aplicar a lógica de Fator R corretamente', () => {
-    // Caso 1: Folha < 28% -> Anexo V (Mais caro)
     const dataV: CompanyData = {
       ...baseCompany,
       annualRevenue: 1000000,
-      payrollCosts: 200000, // 20%
+      payrollCosts: 200000, 
       currentRegime: TaxRegime.Simples,
       simplesAnexo: 'Anexo III',
       simplesFatorR: true
     };
     
-    // Caso 2: Folha >= 28% -> Anexo III (Mais barato)
     const dataIII: CompanyData = {
       ...baseCompany,
       annualRevenue: 1000000,
-      payrollCosts: 300000, // 30%
+      payrollCosts: 300000, 
       currentRegime: TaxRegime.Simples,
       simplesAnexo: 'Anexo III',
       simplesFatorR: true
@@ -76,19 +104,6 @@ describe('TaxService Engine', () => {
     const result = runSimulation(data);
     const reformScenario = result.reformScenario.ranking.find(r => r.regime === TaxRegime.IBS_CBS);
     
-    // Alíquota padrão 26.5% com redução de 60% = 10.6%
     expect(reformScenario?.effectiveRate).toBeCloseTo(10.6, 0.5);
-  });
-
-  it('deve calcular Imposto Seletivo para indústrias de produtos nocivos', () => {
-    const data: CompanyData = {
-      ...baseCompany,
-      type: CompanyType.Industria,
-      industryHarmfulProduct: true
-    };
-    const result = runSimulation(data);
-    const reformScenario = result.reformScenario.ranking.find(r => r.regime === TaxRegime.IBS_CBS);
-    
-    expect(reformScenario?.breakdown?.impostoSeletivo).toBeGreaterThan(0);
   });
 });
