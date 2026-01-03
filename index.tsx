@@ -1,3 +1,4 @@
+
 import '@angular/compiler';
 import 'zone.js';
 import { bootstrapApplication } from '@angular/platform-browser';
@@ -36,12 +37,15 @@ import {
   ShieldCheck,
   TrendingUp,
   Tag,
-  Gift
+  Gift,
+  Plus,
+  Scale,
+  Briefcase,
+  FileText,
+  History
 } from 'lucide-angular';
 
 import { CompanyData, CompanyType, TaxRegime, ViewState, SimulationResult } from './components/types';
-import { runSimulation, lookupCNPJ } from './components/taxService';
-import { validateCNPJStrict, sanitizeInput } from './services/security';
 
 registerLocaleData(localePt);
 
@@ -329,15 +333,15 @@ registerLocaleData(localePt);
       <div *ngSwitchCase="'dashboard'" class="bg-slate-50 min-h-screen">
         <nav class="bg-white border-b px-8 py-4 flex justify-between items-center sticky top-0 z-50">
           <div class="flex items-center gap-2 cursor-pointer" (click)="activeTab.set('overview')">
-            <div class="bg-brand-600 p-1 rounded-md"><lucide-icon [name]="BarChart2" class="h-4 w-4 text-white"></lucide-icon></div>
-            <span class="font-bold">TaxStrategist <span class="text-brand-600">Pro</span></span>
+            <div class="bg-brand-600 p-1 rounded-lg shadow-sm shadow-brand-200"><lucide-icon [name]="BarChart2" class="h-4 w-4 text-white"></lucide-icon></div>
+            <span class="font-bold text-slate-900">TaxStrategist <span class="text-brand-600">Pro</span></span>
           </div>
-          <div class="flex gap-6">
-            <button (click)="activeTab.set('overview')" [class.text-brand-600]="activeTab() === 'overview'" class="text-sm font-bold flex items-center gap-2">
-               <lucide-icon [name]="Database" class="h-4 w-4"></lucide-icon> Simulações
+          <div class="flex gap-1 bg-slate-100 p-1 rounded-xl">
+            <button (click)="activeTab.set('overview')" [class.bg-white]="activeTab() === 'overview'" [class.shadow-sm]="activeTab() === 'overview'" class="text-xs font-bold flex items-center gap-2 px-4 py-2 rounded-lg transition-all">
+               <lucide-icon [name]="Database" class="h-3.5 w-3.5" [class.text-brand-600]="activeTab() === 'overview'"></lucide-icon> Simulações
             </button>
-            <button (click)="activeTab.set('ai')" [class.text-brand-600]="activeTab() === 'ai'" class="text-sm font-bold flex items-center gap-2">
-               <lucide-icon [name]="MessageSquare" class="h-4 w-4"></lucide-icon> Consultoria AI
+            <button (click)="activeTab.set('ai')" [class.bg-white]="activeTab() === 'ai'" [class.shadow-sm]="activeTab() === 'ai'" class="text-xs font-bold flex items-center gap-2 px-4 py-2 rounded-lg transition-all">
+               <lucide-icon [name]="Scale" class="h-3.5 w-3.5" [class.text-brand-600]="activeTab() === 'ai'"></lucide-icon> Consultoria & Leis
             </button>
           </div>
           <button (click)="handleLogout()" class="text-slate-500 font-bold text-sm flex items-center hover:text-red-500 transition-colors">
@@ -349,89 +353,189 @@ registerLocaleData(localePt);
           
           <!-- Aba de Simulações -->
           <div *ngIf="activeTab() === 'overview'" class="space-y-8 animate-fade-in">
-             <div class="flex justify-between items-center">
-                <div>
-                  <h1 class="text-3xl font-black">Inteligência Fiscal</h1>
-                  <p class="text-slate-500">Cenários baseados no PLP 68/2024 e legislação vigente.</p>
+             
+             <!-- Dashboard Com Conteúdo -->
+             <ng-container *ngIf="simulations().length > 0; else emptyState">
+                <div class="flex justify-between items-center">
+                   <div>
+                     <h1 class="text-3xl font-black text-slate-900">Inteligência Fiscal</h1>
+                     <p class="text-slate-500">Cenários baseados no PLP 68/2024 e legislação vigente.</p>
+                   </div>
+                   <button (click)="view.set('onboarding')" class="bg-brand-600 text-white px-5 py-3 rounded-xl font-bold text-sm hover:bg-brand-700 transition-all flex items-center gap-2 shadow-lg shadow-brand-500/20">
+                     <lucide-icon [name]="Plus" class="h-4 w-4"></lucide-icon> Nova Empresa
+                   </button>
                 </div>
-                <button (click)="view.set('onboarding')" class="bg-white border px-4 py-2 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all flex items-center gap-2">
-                  <lucide-icon [name]="PlusCircle" class="h-4 w-4"></lucide-icon> Nova Empresa
-                </button>
-             </div>
 
-             <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-               <div class="col-span-1 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between">
-                  <div class="bg-brand-50 w-10 h-10 rounded-xl flex items-center justify-center mb-4"><lucide-icon [name]="BookOpen" class="text-brand-600 h-5 w-5"></lucide-icon></div>
-                  <h4 class="font-bold text-slate-800">CNAE 62.01-5/00</h4>
-                  <p class="text-xs text-slate-400">Desenvolvimento de Software</p>
-                  <div class="mt-4 pt-4 border-t flex flex-col gap-2">
-                    <span class="text-[10px] font-bold text-slate-400 uppercase">Alertas Legais</span>
-                    <div class="flex items-center gap-1 text-amber-600 text-[10px] font-bold">
-                      <lucide-icon [name]="ShieldAlert" class="h-3 w-3"></lucide-icon> PLP 68/2024: IVA Dual
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                  <div *ngFor="let sim of simulations()" class="col-span-1 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between hover:border-brand-200 transition-colors cursor-pointer group">
+                     <div>
+                       <div class="bg-brand-50 w-10 h-10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-brand-600 group-hover:text-white transition-all">
+                         <lucide-icon [name]="Building2" class="h-5 w-5"></lucide-icon>
+                       </div>
+                       <h4 class="font-bold text-slate-800 leading-tight">{{ sim.name }}</h4>
+                       <p class="text-xs text-slate-400 mt-1">CNAE: {{ sim.cnae }}</p>
+                     </div>
+                     <div class="mt-4 pt-4 border-t flex flex-col gap-2">
+                       <span class="text-[10px] font-bold text-slate-400 uppercase">Status Legais</span>
+                       <div class="flex items-center gap-1 text-amber-600 text-[10px] font-bold">
+                         <lucide-icon [name]="ShieldAlert" class="h-3 w-3"></lucide-icon> Alerta Reforma 2026
+                       </div>
+                     </div>
+                  </div>
+                  
+                  <div class="md:col-span-3 bg-brand-600 p-10 rounded-3xl text-white shadow-xl shadow-brand-500/20 relative overflow-hidden">
+                     <div class="relative z-10">
+                       <p class="text-xs font-bold text-brand-200 uppercase tracking-widest mb-3">Simulação Consolidada</p>
+                       <h3 class="text-4xl md:text-5xl font-black">Economia de R$ 12.450 <span class="text-lg font-normal text-brand-200">/mês</span></h3>
+                       <p class="mt-6 text-sm text-brand-100 max-w-lg leading-relaxed">Suas empresas estão otimizadas. Recomendamos manter o enquadramento atual para o próximo semestre.</p>
+                       <button class="mt-8 bg-white/20 hover:bg-white/30 text-white px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 backdrop-blur-md">
+                         Ver Relatório Completo <lucide-icon [name]="ArrowRight" class="h-4 w-4"></lucide-icon>
+                       </button>
+                     </div>
+                     <lucide-icon [name]="TrendingUp" class="absolute -right-16 -bottom-16 h-64 w-64 text-brand-500 opacity-20 rotate-12"></lucide-icon>
+                  </div>
+                </div>
+             </ng-container>
+
+             <!-- Empty State UI -->
+             <ng-template #emptyState>
+                <div class="flex flex-col items-center justify-center py-20 animate-fade-in">
+                  <div class="bg-white p-12 rounded-[3rem] border border-slate-100 shadow-2xl shadow-slate-200/50 max-w-2xl w-full text-center relative overflow-hidden">
+                    <div class="absolute -top-24 -right-24 w-48 h-48 bg-brand-50 rounded-full blur-3xl opacity-50"></div>
+                    <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-brand-50 rounded-full blur-3xl opacity-50"></div>
+                    
+                    <div class="relative z-10">
+                      <div class="bg-brand-50 w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto mb-8 animate-bounce-slow">
+                        <lucide-icon [name]="Building2" class="text-brand-600 h-10 w-10"></lucide-icon>
+                      </div>
+                      <h2 class="text-3xl font-black text-slate-900 mb-4">Sua jornada estratégica <br/><span class="text-brand-600">começa agora.</span></h2>
+                      <p class="text-slate-500 mb-10 max-w-md mx-auto leading-relaxed">
+                        Parece que você ainda não tem empresas cadastradas. Configure seu primeiro CNPJ para iniciar as simulações da Reforma Tributária.
+                      </p>
+                      
+                      <div class="flex flex-col md:flex-row gap-4 justify-center items-center">
+                        <button (click)="view.set('onboarding')" class="bg-brand-600 text-white px-8 py-5 rounded-2xl font-bold text-lg shadow-xl shadow-brand-500/30 hover:scale-105 transition-all flex items-center gap-3">
+                          <lucide-icon [name]="Plus" class="h-5 w-5"></lucide-icon> Cadastrar Empresa
+                        </button>
+                        <button (click)="activeTab.set('ai')" class="bg-slate-100 text-slate-700 px-8 py-5 rounded-2xl font-bold text-lg hover:bg-slate-200 transition-all flex items-center gap-3">
+                          <lucide-icon [name]="Scale" class="h-5 w-5"></lucide-icon> Ver Legislação
+                        </button>
+                      </div>
                     </div>
                   </div>
-               </div>
-               <div class="md:col-span-3 bg-brand-600 p-8 rounded-3xl text-white shadow-xl shadow-brand-500/20 relative overflow-hidden">
-                  <div class="relative z-10">
-                    <p class="text-xs font-bold text-brand-200 uppercase tracking-widest mb-2">Simulação Consolidada</p>
-                    <h3 class="text-4xl font-black">Economia de R$ 12.450,00 <span class="text-lg font-normal text-brand-200">/mês</span></h3>
-                    <p class="mt-4 text-sm text-brand-100 max-w-lg leading-relaxed">Seu enquadramento no Simples Nacional continua vantajoso mesmo após a transição parcial em 2026.</p>
-                  </div>
-                  <lucide-icon [name]="BarChart2" class="absolute -right-10 -bottom-10 h-48 w-48 text-brand-500 opacity-20"></lucide-icon>
-               </div>
-             </div>
+                </div>
+             </ng-template>
+
           </div>
 
-          <!-- Aba de Consultoria AI (Legislação Federal) -->
-          <div *ngIf="activeTab() === 'ai'" class="animate-fade-in max-w-4xl mx-auto">
-            <div class="bg-white rounded-3xl border shadow-sm overflow-hidden flex flex-col h-[70vh]">
-              <div class="p-6 bg-slate-50 border-b flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                  <div class="bg-brand-600 p-2 rounded-xl"><lucide-icon [name]="Sparkles" class="h-5 w-5 text-white"></lucide-icon></div>
-                  <div>
-                    <h2 class="font-bold text-slate-900 leading-none">Consultor de Legislação Federal</h2>
-                    <span class="text-[10px] text-brand-600 font-bold uppercase tracking-wider">Base Gemini 3 Pro + Google Search</span>
-                  </div>
-                </div>
-                <button (click)="clearChat()" class="text-slate-400 hover:text-red-500 transition-colors"><lucide-icon [name]="XCircle" class="h-5 w-5"></lucide-icon></button>
-              </div>
-
-              <div class="flex-1 overflow-y-auto p-6 space-y-6" #chatContainer>
-                <div *ngFor="let msg of chatHistory()" [class]="msg.role === 'user' ? 'flex justify-end' : 'flex justify-start'">
-                   <div [class]="msg.role === 'user' ? 'bg-brand-600 text-white rounded-2xl rounded-tr-none' : 'bg-slate-100 text-slate-800 rounded-2xl rounded-tl-none'" class="max-w-[80%] p-4 shadow-sm">
-                      <p class="text-sm leading-relaxed whitespace-pre-wrap">{{ msg.text }}</p>
-                      
-                      <!-- Grounding Sources -->
-                      <div *ngIf="msg.sources?.length" class="mt-4 pt-4 border-t border-slate-200/50">
-                        <p class="text-[10px] font-bold text-slate-400 mb-2 uppercase">Referências Legais</p>
-                        <div class="flex flex-wrap gap-2">
-                          <a *ngFor="let source of msg.sources" [href]="source.uri" target="_blank" class="flex items-center gap-1 bg-white px-2 py-1 rounded border text-[10px] text-brand-600 hover:bg-brand-50 transition-colors">
-                            <lucide-icon [name]="ExternalLink" class="h-2.5 w-2.5"></lucide-icon> {{ source.title }}
-                          </a>
+          <!-- Aba de Consultoria & Legislação -->
+          <div *ngIf="activeTab() === 'ai'" class="animate-fade-in">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              
+              <!-- Painel Lateral de Legislação -->
+              <div class="lg:col-span-4 space-y-6">
+                <div class="bg-white p-6 rounded-[2.5rem] border shadow-sm">
+                   <h3 class="text-lg font-black text-slate-900 mb-4 flex items-center gap-2">
+                     <lucide-icon [name]="BookOpen" class="h-5 w-5 text-brand-600"></lucide-icon> Centro Legislativo
+                   </h3>
+                   <p class="text-xs text-slate-500 mb-6 leading-relaxed">Clique para obter um resumo técnico e as alterações de 2026 para cada tributo.</p>
+                   
+                   <div class="space-y-3">
+                     <button (click)="askLegislativeSummary('Simples Nacional')" class="w-full p-4 rounded-2xl border bg-slate-50 hover:bg-brand-50 hover:border-brand-200 transition-all text-left group">
+                        <div class="flex justify-between items-center mb-1">
+                          <span class="text-sm font-bold text-slate-800">Simples Nacional</span>
+                          <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 font-bold uppercase group-hover:bg-brand-600 group-hover:text-white">Estável</span>
                         </div>
-                      </div>
+                        <p class="text-[10px] text-slate-400">LC 123/06 • Transição IBS/CBS Híbrido</p>
+                     </button>
+
+                     <button (click)="askLegislativeSummary('ICMS Estadual')" class="w-full p-4 rounded-2xl border bg-slate-50 hover:bg-brand-50 hover:border-brand-200 transition-all text-left group">
+                        <div class="flex justify-between items-center mb-1">
+                          <span class="text-sm font-bold text-slate-800">ICMS (Estadual)</span>
+                          <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-bold uppercase group-hover:bg-brand-600 group-hover:text-white">Extinção</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400">RICMS • Convergência para IBS em 2026</p>
+                     </button>
+
+                     <button (click)="askLegislativeSummary('ISS Municipal')" class="w-full p-4 rounded-2xl border bg-slate-50 hover:bg-brand-50 hover:border-brand-200 transition-all text-left group">
+                        <div class="flex justify-between items-center mb-1">
+                          <span class="text-sm font-bold text-slate-800">ISS (Municipal)</span>
+                          <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-bold uppercase group-hover:bg-brand-600 group-hover:text-white">Extinção</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400">LC 116/03 • Convergência para IBS</p>
+                     </button>
+
+                     <button (click)="askLegislativeSummary('IPI e Indústria')" class="w-full p-4 rounded-2xl border bg-slate-50 hover:bg-brand-50 hover:border-brand-200 transition-all text-left group">
+                        <div class="flex justify-between items-center mb-1">
+                          <span class="text-sm font-bold text-slate-800">IPI & Indústria</span>
+                          <span class="text-[10px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-bold uppercase group-hover:bg-brand-600 group-hover:text-white">Seletivo</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400">RIPI • Imposto Seletivo 2026</p>
+                     </button>
                    </div>
                 </div>
-                <div *ngIf="isThinking()" class="flex justify-start animate-pulse">
-                  <div class="bg-slate-100 p-4 rounded-2xl rounded-tl-none flex items-center gap-2">
-                    <lucide-icon [name]="Loader2" class="h-4 w-4 animate-spin text-brand-600"></lucide-icon>
-                    <span class="text-sm font-medium text-slate-500">Consultando legislação federal...</span>
-                  </div>
+
+                <div class="bg-brand-900 p-6 rounded-[2rem] text-white">
+                   <div class="flex items-center gap-2 mb-3">
+                     <lucide-icon [name]="History" class="h-4 w-4 text-brand-300"></lucide-icon>
+                     <span class="text-xs font-bold uppercase tracking-widest text-brand-300">Última Atualização</span>
+                   </div>
+                   <p class="text-sm font-medium mb-1">Base: Março 2024</p>
+                   <p class="text-[10px] text-brand-400 leading-relaxed">Monitorando PLP 68/2024 e novas regulamentações do CONFAZ em tempo real via Google Search.</p>
                 </div>
               </div>
 
-              <div class="p-4 bg-white border-t">
-                <div class="flex gap-2">
-                  <input 
-                    [(ngModel)]="aiQuery" 
-                    (keyup.enter)="askAI()"
-                    placeholder="Ex: Qual o limite de faturamento do Simples em 2026?" 
-                    class="flex-1 p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-brand-500 transition-all text-sm">
-                  <button (click)="askAI()" [disabled]="isThinking() || !aiQuery.trim()" class="bg-brand-600 text-white p-4 rounded-2xl shadow-lg hover:bg-brand-700 disabled:opacity-50 transition-all">
-                    <lucide-icon [name]="ArrowRight" class="h-5 w-5"></lucide-icon>
-                  </button>
+              <!-- Janela do Chat -->
+              <div class="lg:col-span-8">
+                <div class="bg-white rounded-[2.5rem] border shadow-sm overflow-hidden flex flex-col h-[75vh]">
+                  <div class="p-6 bg-slate-50 border-b flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                      <div class="bg-brand-600 p-2.5 rounded-xl shadow-md shadow-brand-200"><lucide-icon [name]="Sparkles" class="h-5 w-5 text-white"></lucide-icon></div>
+                      <div>
+                        <h2 class="font-bold text-slate-900 leading-none">Consultor de Legislação Integrada</h2>
+                        <span class="text-[10px] text-brand-600 font-bold uppercase tracking-wider">Base Gemini 3 Pro + Diário Oficial</span>
+                      </div>
+                    </div>
+                    <button (click)="clearChat()" class="text-slate-400 hover:text-red-500 transition-colors p-2"><lucide-icon [name]="XCircle" class="h-5 w-5"></lucide-icon></button>
+                  </div>
+
+                  <div class="flex-1 overflow-y-auto p-6 space-y-6" #chatContainer>
+                    <div *ngFor="let msg of chatHistory()" [class]="msg.role === 'user' ? 'flex justify-end' : 'flex justify-start'">
+                       <div [class]="msg.role === 'user' ? 'bg-brand-600 text-white rounded-2xl rounded-tr-none' : 'bg-slate-100 text-slate-800 rounded-2xl rounded-tl-none'" class="max-w-[90%] p-5 shadow-sm">
+                          <p class="text-sm leading-relaxed whitespace-pre-wrap">{{ msg.text }}</p>
+                          
+                          <!-- Grounding Sources -->
+                          <div *ngIf="msg.sources?.length" class="mt-4 pt-4 border-t border-slate-200/50">
+                            <p class="text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-tighter">Fontes Oficiais Consultadas</p>
+                            <div class="flex flex-wrap gap-2">
+                              <a *ngFor="let source of msg.sources" [href]="source.uri" target="_blank" class="flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 text-[10px] text-brand-600 hover:bg-brand-50 hover:border-brand-200 transition-all">
+                                <lucide-icon [name]="ExternalLink" class="h-3 w-3"></lucide-icon> {{ source.title }}
+                              </a>
+                            </div>
+                          </div>
+                       </div>
+                    </div>
+                    <div *ngIf="isThinking()" class="flex justify-start animate-pulse">
+                      <div class="bg-slate-100 p-5 rounded-2xl rounded-tl-none flex items-center gap-3">
+                        <lucide-icon [name]="Loader2" class="h-4 w-4 animate-spin text-brand-600"></lucide-icon>
+                        <span class="text-sm font-medium text-slate-500">Acessando base da Receita e Diário Oficial...</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="p-6 bg-white border-t">
+                    <div class="flex gap-3">
+                      <input 
+                        [(ngModel)]="aiQuery" 
+                        (keyup.enter)="askAI()"
+                        placeholder="Ex: Qual o impacto do IBS na indústria de eletrônicos?" 
+                        class="flex-1 p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all text-sm">
+                      <button (click)="askAI()" [disabled]="isThinking() || !aiQuery.trim()" class="bg-brand-600 text-white p-4 rounded-2xl shadow-lg shadow-brand-500/30 hover:bg-brand-700 disabled:opacity-50 transition-all">
+                        <lucide-icon [name]="ArrowRight" class="h-6 w-6"></lucide-icon>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <p class="text-[10px] text-slate-400 text-center mt-3">Sempre valide informações críticas com um contador especializado.</p>
               </div>
             </div>
           </div>
@@ -444,6 +548,8 @@ registerLocaleData(localePt);
   styles: [`
     .animate-fade-in { animation: fadeIn 0.4s ease-out; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes bounceSlow { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    .animate-bounce-slow { animation: bounceSlow 3s infinite ease-in-out; }
     input::placeholder { color: #94a3b8; }
   `]
 })
@@ -477,35 +583,19 @@ export class App implements OnInit {
   Loader2 = Loader2; Sparkles = Sparkles; Mail = Mail; Lock = Lock;
   User = User; Eye = Eye; EyeOff = EyeOff; Clock = Clock; Zap = Zap;
   ShieldCheck = ShieldCheck; TrendingUp = TrendingUp; Tag = Tag; Gift = Gift;
+  Plus = Plus; Scale = Scale; Briefcase = Briefcase; FileText = FileText;
+  History = History;
 
   ngOnInit() {
-    // Carregar dados fictícios se estiver vazio
-    if (this.simulations().length === 0) {
-      this.simulations.set([{
-        cnpj: '00.394.460/0001-41',
-        name: 'RECEITA FEDERAL DO BRASIL',
-        municipality: 'Brasília',
-        state: 'DF',
-        annualRevenue: 4800000,
-        payrollCosts: 1200000,
-        type: CompanyType.Servico,
-        currentRegime: TaxRegime.Simples,
-        cnae: '8411-6/00',
-        suppliers: []
-      }]);
-    }
-
-    // Mensagem de boas-vindas do Consultor
     this.chatHistory.set([{
       role: 'model',
-      text: 'Olá! Sou seu assistente tributário especializado em legislação federal. Posso tirar dúvidas sobre Simples Nacional, Lucro Presumido, IRPJ, CSLL e as mudanças da Reforma Tributária 2026. Como posso ajudar hoje?'
+      text: 'Bem-vindo ao Centro de Inteligência Tributária. Estou configurado com toda a legislação federal (IRPJ, CSLL, IPI/Indústria, Simples Nacional), estadual (ICMS) e municipal (ISS), incluindo as regras do IVA Dual da Reforma 2026. Como posso orientá-lo hoje?'
     }]);
   }
 
   handleLogin() {
     if (!this.authForm.email || !this.authForm.password) return;
     this.isAuthenticating.set(true);
-    // Simulação de delay de rede
     setTimeout(() => {
       this.isAuthenticating.set(false);
       this.view.set('dashboard');
@@ -524,6 +614,12 @@ export class App implements OnInit {
   handleLogout() {
     this.view.set('landing');
     this.authForm = { name: '', email: '', password: '' };
+    this.simulations.set([]);
+  }
+
+  async askLegislativeSummary(topic: string) {
+    this.aiQuery = `Faça um resumo técnico completo sobre a legislação atual de ${topic}, incluindo as principais regras de cálculo e detalhando TODAS as alterações previstas para 2026 na Reforma Tributária (IBS/CBS/Imposto Seletivo). Cite leis específicas (Ex: LC 123, RICMS, etc).`;
+    await this.askAI();
   }
 
   async askAI() {
@@ -541,14 +637,22 @@ export class App implements OnInit {
         contents: userPrompt,
         config: {
           tools: [{ googleSearch: {} }],
-          systemInstruction: "Você é um consultor tributário sênior especializado em legislação brasileira (Receita Federal, Planalto, Reforma Tributária). Forneça respostas precisas, citando leis se possível. Use uma linguagem profissional e clara."
+          systemInstruction: `Você é um Consultor Tributário Sênior e Advogado Especialista em Direito Tributário Brasileiro. 
+          Sua especialidade cobre:
+          1. ISS: LC 116/03 e transição para o IBS.
+          2. ICMS: Regras estaduais, Convênios CONFAZ e convergência para o IBS.
+          3. INDÚSTRIA: IPI (RIPI), créditos físicos e financeiros, e o novo Imposto Seletivo.
+          4. SIMPLES NACIONAL: LC 123/06, Fator R, e o regime híbrido pós-2026.
+          5. REFORMA TRIBUTÁRIA: PLP 68/2024 e o IVA Dual.
+          
+          Forneça respostas altamente técnicas, baseadas em lei, curtas mas completas. Sempre cite o impacto da Reforma 2026.`
         },
       });
 
-      const text = response.text || "Desculpe, não consegui processar essa consulta agora.";
+      const text = response.text || "Erro ao processar consulta legislativa.";
       const rawSources = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
       const sources = rawSources.map((chunk: any) => ({
-        title: chunk.web?.title || 'Link Oficial',
+        title: chunk.web?.title || 'Base Legal Oficial',
         uri: chunk.web?.uri || '#'
       }));
 
@@ -557,7 +661,7 @@ export class App implements OnInit {
       console.error('Erro na consulta AI:', err);
       this.chatHistory.update(h => [...h, { 
         role: 'model', 
-        text: 'Ocorreu um erro ao consultar a base da Receita Federal. Por favor, tente novamente em instantes.' 
+        text: 'Erro de conexão com o Diário Oficial. Tente novamente.' 
       }]);
     } finally {
       this.isThinking.set(false);
@@ -567,7 +671,7 @@ export class App implements OnInit {
   clearChat() {
     this.chatHistory.set([{
       role: 'model',
-      text: 'Chat reiniciado. Em que posso ajudar com a legislação tributária?'
+      text: 'Chat reiniciado. O Centro Legislativo está pronto para novas consultas sobre ISS, ICMS, Indústria ou Simples Nacional.'
     }]);
   }
 }
