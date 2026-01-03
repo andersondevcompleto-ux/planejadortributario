@@ -1,3 +1,4 @@
+
 export type Language = 'pt' | 'en';
 
 export enum TaxRegime {
@@ -37,7 +38,8 @@ export interface CompanyData {
   name: string;
   municipality: string;
   state: string;
-  cnae: string;
+  cnae: string; // CNAE Principal
+  secondaryCnaes?: string[]; // CNAEs Secundários
   type: CompanyType;
   // NEW: Service Sub-category for Reform calculation
   serviceCategory?: ServiceCategory;

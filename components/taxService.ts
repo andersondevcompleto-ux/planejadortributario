@@ -1,3 +1,4 @@
+
 import { CompanyData, SimulationResult, TaxRegime, CompanyType, ScenarioResult, ServiceCategory } from './types';
 
 // Mock API response delay
@@ -12,9 +13,15 @@ export const ICMS_RATES: Record<string, number> = {
   'SE': 19, 'SP': 18, 'TO': 20
 };
 
-export const lookupCNPJ = async (cnpj: string): Promise<{ name: string; municipality: string; state: string }> => {
-  await delay(800); 
-  // Simulation of a lookup based on CNPJ ending to vary the response slightly for demo
+export const lookupCNPJ = async (cnpj: string): Promise<{ 
+  name: string; 
+  municipality: string; 
+  state: string;
+  cnae: string;
+  secondaryCnaes: string[];
+}> => {
+  await delay(1200); // Simula latência de consulta externa
+  // Simulação de resposta baseada no final do CNPJ
   const lastDigit = parseInt(cnpj.replace(/\D/g, '').slice(-1)) || 0;
   
   const cities = [
@@ -27,10 +34,20 @@ export const lookupCNPJ = async (cnpj: string): Promise<{ name: string; municipa
   
   const location = cities[lastDigit % cities.length];
 
+  const cnaeList = [
+    '6201-5/00', '6202-3/00', '4751-2/01', '7020-4/00', '8211-3/00'
+  ];
+
   return {
-    name: "EMPRESA MODELO S.A.",
+    name: "EMPRESA MODELO ESTRATÉGICA S.A.",
     municipality: location.m,
-    state: location.s
+    state: location.s,
+    cnae: cnaeList[lastDigit % cnaeList.length],
+    secondaryCnaes: [
+      '8219-9/99',
+      '7490-1/04',
+      '8599-6/04'
+    ]
   };
 };
 

@@ -1,4 +1,3 @@
-
 import '@angular/compiler';
 import 'zone.js';
 import { bootstrapApplication } from '@angular/platform-browser';
@@ -22,7 +21,7 @@ import {
   Loader2, 
   CheckCircle, 
   XCircle, 
-  ShieldAlert,
+  ShieldAlert, 
   MessageSquare,
   BookOpen,
   ExternalLink,
@@ -49,7 +48,11 @@ import {
   Shield,
   MailCheck,
   DollarSign,
-  PieChart
+  PieChart,
+  MapPin,
+  ClipboardList,
+  Wallet,
+  Coins
 } from 'lucide-angular';
 
 import { CompanyData, CompanyType, TaxRegime, ViewState, SimulationResult } from './components/types';
@@ -220,12 +223,35 @@ registerLocaleData(localePt);
                 </button>
               </div>
 
-              <div *ngIf="companyForm.name" class="p-6 bg-brand-50 rounded-2xl border border-brand-100 animate-fade-in">
-                <div class="flex items-center gap-4">
-                  <div class="bg-white p-3 rounded-xl shadow-sm"><lucide-icon [name]="CheckCircle" class="text-brand-600 h-6 w-6"></lucide-icon></div>
-                  <div>
-                    <h4 class="font-black text-slate-900">{{ companyForm.name }}</h4>
-                    <p class="text-sm text-slate-500">{{ companyForm.municipality }} - {{ companyForm.state }}</p>
+              <div *ngIf="companyForm.name" class="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-200 animate-fade-in space-y-6">
+                <div class="flex items-start gap-4">
+                  <div class="bg-brand-600 p-3 rounded-2xl shadow-lg shadow-brand-200"><lucide-icon [name]="CheckCircle" class="text-white h-6 w-6"></lucide-icon></div>
+                  <div class="flex-1">
+                    <h4 class="font-black text-slate-900 text-lg leading-tight mb-1">{{ companyForm.name }}</h4>
+                    <div class="flex items-center gap-1.5 text-slate-500 text-sm">
+                      <lucide-icon [name]="MapPin" class="h-3.5 w-3.5"></lucide-icon>
+                      {{ companyForm.municipality }} - {{ companyForm.state }}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4 pt-4 border-t border-slate-200">
+                  <div class="space-y-2">
+                    <div class="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                      <lucide-icon [name]="ClipboardList" class="h-3 w-3"></lucide-icon> CNAE Principal
+                    </div>
+                    <div class="bg-white p-3 rounded-xl border text-xs font-medium text-slate-700">
+                      {{ companyForm.cnae }}
+                    </div>
+                  </div>
+
+                  <div *ngIf="companyForm.secondaryCnaes?.length" class="space-y-2">
+                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">CNAEs Secundários</div>
+                    <div class="flex flex-wrap gap-2">
+                      <span *ngFor="let cnae of companyForm.secondaryCnaes" class="px-2.5 py-1 bg-white border rounded-lg text-[10px] font-bold text-slate-600 shadow-sm">
+                        {{ cnae }}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -244,13 +270,13 @@ registerLocaleData(localePt);
             <div *ngIf="onboardingStep() === 2" class="space-y-8 animate-fade-in">
                <div>
                  <h3 class="text-2xl font-black text-slate-900 mb-2">Perfil de Negócio</h3>
-                 <p class="text-slate-500">Como a empresa opera hoje?</p>
+                 <p class="text-slate-500">Selecione as características tributárias atuais.</p>
                </div>
 
                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <button 
                     *ngFor="let type of companyTypes" 
-                    (click)="companyForm.type = type.value"
+                    (click)="setCompanyType(type.value)"
                     [class.border-brand-600]="companyForm.type === type.value"
                     [class.bg-brand-50]="companyForm.type === type.value"
                     class="p-6 border-2 border-slate-100 rounded-3xl text-left hover:border-brand-200 transition-all group">
@@ -264,7 +290,7 @@ registerLocaleData(localePt);
                   <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <button 
                       *ngFor="let regime of regimes" 
-                      (click)="companyForm.currentRegime = regime"
+                      (click)="setTaxRegime(regime)"
                       [class.bg-slate-900]="companyForm.currentRegime === regime"
                       [class.text-white]="companyForm.currentRegime === regime"
                       class="px-4 py-3 border rounded-xl text-sm font-bold hover:bg-slate-50 transition-all">
@@ -276,10 +302,10 @@ registerLocaleData(localePt);
                <!-- OPÇÕES ESPECÍFICAS SIMPLES NACIONAL -->
                <div *ngIf="companyForm.currentRegime === 'Simples Nacional'" class="space-y-4 animate-fade-in p-6 bg-slate-50 rounded-3xl border border-slate-100">
                   <div>
-                    <label class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 block">Selecione o Anexo</label>
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 block">Escolha o Anexo</label>
                     <div class="flex flex-wrap gap-2">
                       <button 
-                        *ngFor="let anexo of ['Anexo I', 'Anexo II', 'Anexo III', 'Anexo IV', 'Anexo V']"
+                        *ngFor="let anexo of getAvailableAnnexes()"
                         (click)="companyForm.simplesAnexo = anexo"
                         [class.bg-brand-600]="companyForm.simplesAnexo === anexo"
                         [class.text-white]="companyForm.simplesAnexo === anexo"
@@ -289,9 +315,14 @@ registerLocaleData(localePt);
                     </div>
                   </div>
                   
-                  <div *ngIf="companyForm.simplesAnexo === 'Anexo V'" class="flex items-center gap-3 pt-2 bg-white p-3 rounded-xl shadow-sm border border-brand-100">
-                    <input type="checkbox" [(ngModel)]="companyForm.simplesFatorR" class="w-5 h-5 accent-brand-600 cursor-pointer">
-                    <label class="text-sm font-bold text-slate-700 cursor-pointer">Sujeito ao Fator R? (Pode reduzir para Anexo III)</label>
+                  <!-- Mensagem informativa sobre trava de anexo -->
+                  <p *ngIf="companyForm.type !== 'Serviço'" class="text-[10px] text-slate-400 font-medium italic">
+                    * Para {{ companyForm.type }}, o enquadramento é fixado no {{ companyForm.simplesAnexo }}.
+                  </p>
+                  
+                  <div *ngIf="companyForm.simplesAnexo === 'Anexo V'" class="flex items-center gap-3 pt-2 bg-white p-3 rounded-xl shadow-sm border border-brand-100 animate-fade-in">
+                    <input type="checkbox" id="fatorR" [(ngModel)]="companyForm.simplesFatorR" class="w-5 h-5 accent-brand-600 cursor-pointer">
+                    <label for="fatorR" class="text-sm font-bold text-slate-700 cursor-pointer select-none">Sujeito ao Fator R? (Pode reduzir para Anexo III)</label>
                   </div>
                </div>
 
@@ -300,7 +331,7 @@ registerLocaleData(localePt);
                     <lucide-icon [name]="ArrowLeft" class="h-4 w-4"></lucide-icon> Voltar
                   </button>
                   <button (click)="nextStep()" class="bg-brand-600 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-xl shadow-brand-500/20 hover:scale-105 transition-all flex items-center gap-2">
-                    Finanças <lucide-icon [name]="ArrowRight" class="h-5 w-5"></lucide-icon>
+                    Dados Financeiros <lucide-icon [name]="ArrowRight" class="h-5 w-5"></lucide-icon>
                   </button>
                </div>
             </div>
@@ -309,30 +340,30 @@ registerLocaleData(localePt);
             <div *ngIf="onboardingStep() === 3" class="space-y-8 animate-fade-in">
                <div>
                  <h3 class="text-2xl font-black text-slate-900 mb-2">Dados Financeiros</h3>
-                 <p class="text-slate-500">Valores anuais estimados para simulação.</p>
+                 <p class="text-slate-500">Valores anuais médios para cálculo de projeção.</p>
                </div>
 
                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                  <div class="space-y-2">
                    <label class="text-xs font-bold text-slate-500 uppercase tracking-widest">Faturamento Anual (R$)</label>
-                   <div class="relative">
-                     <lucide-icon [name]="DollarSign" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 h-5 w-5"></lucide-icon>
-                     <input type="number" [(ngModel)]="companyForm.annualRevenue" class="w-full pl-12 p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-brand-500">
+                   <div class="relative group">
+                     <lucide-icon [name]="Wallet" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 h-5 w-5 group-focus-within:text-brand-600"></lucide-icon>
+                     <input type="number" [(ngModel)]="companyForm.annualRevenue" placeholder="0.00" class="w-full pl-12 p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-brand-500 text-lg font-bold">
                    </div>
                  </div>
                  <div class="space-y-2">
                    <label class="text-xs font-bold text-slate-500 uppercase tracking-widest">Custo de Folha Anual (R$)</label>
-                   <div class="relative">
-                     <lucide-icon [name]="User" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 h-5 w-5"></lucide-icon>
-                     <input type="number" [(ngModel)]="companyForm.payrollCosts" class="w-full pl-12 p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-brand-500">
+                   <div class="relative group">
+                     <lucide-icon [name]="Coins" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 h-5 w-5 group-focus-within:text-brand-600"></lucide-icon>
+                     <input type="number" [(ngModel)]="companyForm.payrollCosts" placeholder="0.00" class="w-full pl-12 p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-brand-500 text-lg font-bold">
                    </div>
                  </div>
                </div>
 
                <div class="bg-brand-50 p-6 rounded-3xl flex items-center gap-4">
-                  <lucide-icon [name]="Sparkles" class="text-brand-600 h-10 w-10"></lucide-icon>
-                  <p class="text-sm text-brand-900 leading-relaxed">
-                    Estamos quase lá! Com esses dados, nossa IA calculará sua economia no <strong>Simples, Lucro Presumido</strong> e na <strong>Reforma Tributária 2026</strong>.
+                  <div class="bg-white p-3 rounded-2xl shadow-sm"><lucide-icon [name]="Sparkles" class="text-brand-600 h-8 w-8"></lucide-icon></div>
+                  <p class="text-sm text-brand-900 font-medium leading-relaxed">
+                    Com base nos <strong>R$ {{ companyForm.annualRevenue | number:'1.2-2':'pt-BR' }}</strong> de faturamento, processaremos as alíquotas da Reforma 2026.
                   </p>
                </div>
 
@@ -341,7 +372,7 @@ registerLocaleData(localePt);
                     <lucide-icon [name]="ArrowLeft" class="h-4 w-4"></lucide-icon> Voltar
                   </button>
                   <button (click)="finishOnboarding()" [disabled]="!companyForm.annualRevenue" class="bg-brand-600 text-white px-10 py-5 rounded-2xl font-black text-xl shadow-2xl shadow-brand-500/40 hover:scale-105 transition-all flex items-center gap-3">
-                    Gerar Inteligência <lucide-icon [name]="PieChart" class="h-6 w-6"></lucide-icon>
+                    Gerar Análise <lucide-icon [name]="PieChart" class="h-6 w-6"></lucide-icon>
                   </button>
                </div>
             </div>
@@ -361,7 +392,10 @@ registerLocaleData(localePt);
             <button (click)="activeTab.set('ai')" [class.bg-white]="activeTab() === 'ai'" class="text-xs font-bold px-4 py-2 rounded-lg transition-all">Consultoria & Leis</button>
             <button (click)="activeTab.set('profile')" [class.bg-white]="activeTab() === 'profile'" class="text-xs font-bold px-4 py-2 rounded-lg transition-all">Perfil</button>
           </div>
-          <button (click)="handleLogout()" class="text-slate-500 font-bold text-sm">Sair</button>
+          <div class="flex items-center gap-4">
+            <span class="text-xs font-bold text-slate-400">{{ profileForm.name }}</span>
+            <button (click)="handleLogout()" class="text-slate-500 font-bold text-sm hover:text-red-500 transition-colors">Sair</button>
+          </div>
         </nav>
 
         <div class="max-w-7xl mx-auto p-8">
@@ -371,31 +405,57 @@ registerLocaleData(localePt);
              <div *ngIf="simulations().length > 0; else emptyState">
                 <div class="flex justify-between items-center mb-6">
                    <h1 class="text-3xl font-black text-slate-900">Inteligência Fiscal</h1>
-                   <button (click)="startNewSimulation()" class="bg-brand-600 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-brand-500/20">
+                   <button (click)="startNewSimulation()" class="bg-brand-600 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-brand-500/20 hover:scale-105 transition-all">
                      <lucide-icon [name]="Plus" class="h-4 w-4"></lucide-icon> Nova Simulação
                    </button>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <div *ngFor="let sim of simulations()" class="bg-white p-6 rounded-3xl border shadow-sm hover:border-brand-200 transition-all cursor-pointer group">
-                     <div class="bg-brand-50 w-10 h-10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-brand-600 group-hover:text-white transition-all"><lucide-icon [name]="Building2" class="h-5 w-5"></lucide-icon></div>
-                     <h4 class="font-bold text-slate-800 leading-tight">{{ sim.name }}</h4>
-                     <p class="text-xs text-slate-400 mt-1">{{ sim.cnpj }}</p>
-                     <div class="mt-4 pt-4 border-t flex justify-between items-center">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase">Regime</span>
-                        <span class="text-[10px] font-black text-brand-600">{{ sim.currentRegime }}</span>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  <div *ngFor="let sim of simulations()" class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl hover:border-brand-200 transition-all cursor-pointer group flex flex-col h-full">
+                     <div class="flex justify-between items-start mb-6">
+                        <div class="bg-brand-50 w-12 h-12 rounded-2xl flex items-center justify-center group-hover:bg-brand-600 group-hover:text-white transition-all shadow-sm">
+                          <lucide-icon [name]="Building2" class="h-6 w-6"></lucide-icon>
+                        </div>
+                        <span class="text-[10px] px-3 py-1.5 rounded-full bg-slate-900 text-white font-black uppercase tracking-widest">{{ sim.currentRegime }}</span>
+                     </div>
+
+                     <div class="flex-1">
+                        <h4 class="font-black text-slate-900 text-xl leading-tight mb-2 truncate">{{ sim.name }}</h4>
+                        <p class="text-xs text-slate-400 font-bold tracking-tighter mb-6">{{ sim.cnpj }}</p>
+
+                        <!-- VALORES INFORMADOS (Reiterando na UI conforme solicitado) -->
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                           <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                              <span class="block text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-1">Faturamento</span>
+                              <span class="text-xs font-black text-slate-700">R$ {{ sim.annualRevenue | number:'1.2-2':'pt-BR' }}</span>
+                           </div>
+                           <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                              <span class="block text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-1">CNAE Principal</span>
+                              <span class="text-xs font-black text-slate-700 truncate block">{{ sim.cnae }}</span>
+                           </div>
+                        </div>
+                     </div>
+
+                     <div class="pt-6 border-t border-slate-50 flex justify-between items-center">
+                        <div class="flex flex-col">
+                           <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Economia Mensal</span>
+                           <span class="text-brand-600 font-black">R$ 1.250,00</span>
+                        </div>
+                        <button class="bg-slate-50 text-slate-400 p-2.5 rounded-xl hover:bg-brand-600 hover:text-white transition-all">
+                           <lucide-icon [name]="ChevronRight" class="h-5 w-5"></lucide-icon>
+                        </button>
                      </div>
                   </div>
                 </div>
              </div>
              <ng-template #emptyState>
-                <div class="text-center py-20 bg-white rounded-[3rem] border shadow-2xl shadow-slate-200/50 max-w-2xl mx-auto">
+                <div class="text-center py-20 bg-white rounded-[3rem] border border-slate-100 shadow-2xl shadow-slate-200/50 max-w-2xl mx-auto">
                   <div class="bg-brand-50 w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto mb-8">
                     <lucide-icon [name]="Building2" class="h-10 w-10 text-brand-600"></lucide-icon>
                   </div>
-                  <h2 class="text-3xl font-black mb-4">Inicie sua inteligência fiscal</h2>
-                  <p class="text-slate-500 mb-10 max-w-sm mx-auto">Configure sua primeira empresa para ver o comparativo detalhado da Reforma Tributária.</p>
+                  <h2 class="text-3xl font-black text-slate-900 mb-4">Bem-vindo à nova era fiscal</h2>
+                  <p class="text-slate-500 mb-10 max-w-sm mx-auto font-medium">Configure sua primeira empresa para ver o comparativo detalhado da Reforma Tributária 2026.</p>
                   <button (click)="startNewSimulation()" class="bg-brand-600 text-white px-10 py-5 rounded-2xl font-black text-xl shadow-xl hover:scale-105 transition-all">
-                    Começar Agora
+                    Iniciar Nova Estratégia
                   </button>
                 </div>
              </ng-template>
@@ -501,8 +561,8 @@ registerLocaleData(localePt);
                   </div>
 
                   <div class="p-6 bg-white border-t flex gap-3">
-                    <input [(ngModel)]="aiQuery" (keyup.enter)="askAI()" placeholder="Sua dúvida sobre ICMS, ISS, IPI ou Simples..." class="flex-1 p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-brand-500">
-                    <button (click)="askAI()" [disabled]="isThinking() || !aiQuery.trim()" class="bg-brand-600 text-white p-4 rounded-2xl shadow-lg hover:bg-brand-700 transition-all">
+                    <input [(ngModel)]="aiQuery" (keyup.enter)="askAI()" placeholder="Sua dúvida sobre ICMS, ISS, IPI ou Simples..." class="flex-1 p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-brand-500">
+                    <button (click)="askAI()" [disabled]="isThinking() || !aiQuery.trim()" class="bg-brand-600 text-white p-4 rounded-2xl shadow-lg hover:bg-brand-700 transition-all disabled:opacity-50">
                       <lucide-icon [name]="ArrowRight" class="h-6 w-6"></lucide-icon>
                     </button>
                   </div>
@@ -528,7 +588,7 @@ registerLocaleData(localePt);
                   </div>
                 </div>
                 <div class="mt-8 flex justify-end">
-                   <button (click)="updateName()" class="bg-brand-600 text-white px-8 py-3 rounded-xl font-bold">Salvar Alterações</button>
+                   <button (click)="updateName()" class="bg-brand-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-brand-700 transition-all">Salvar Alterações</button>
                 </div>
              </div>
              <div class="bg-red-50 rounded-[2.5rem] border border-red-100 p-8 flex justify-between items-center">
@@ -536,7 +596,7 @@ registerLocaleData(localePt);
                   <h3 class="text-lg font-bold text-red-800 mb-1">Zona Crítica</h3>
                   <p class="text-sm text-red-600/70">Excluir conta permanentemente (confirmação via e-mail).</p>
                 </div>
-                <button (click)="requestDeleteAccount()" class="bg-red-600 text-white px-6 py-3 rounded-xl font-bold">Excluir</button>
+                <button (click)="requestDeleteAccount()" class="bg-red-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-red-700 transition-all">Excluir Conta</button>
              </div>
           </div>
         </div>
@@ -544,13 +604,13 @@ registerLocaleData(localePt);
 
       <!-- Modal de Exclusão (Simulado) -->
       <div *ngIf="showDeleteModal()" class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
-         <div class="bg-white w-full max-w-md rounded-[3rem] p-10 animate-fade-in">
+         <div class="bg-white w-full max-w-md rounded-[3rem] p-10 animate-fade-in shadow-2xl">
             <h2 class="text-2xl font-black text-center mb-4">Confirmar Exclusão</h2>
             <p class="text-center text-slate-500 mb-8">Insira o código enviado para seu e-mail (Simulado: 123456).</p>
-            <input type="text" [(ngModel)]="deleteCodeInput" class="w-full p-5 text-center text-3xl font-black tracking-widest bg-slate-50 border rounded-2xl mb-6">
+            <input type="text" [(ngModel)]="deleteCodeInput" class="w-full p-5 text-center text-3xl font-black tracking-widest bg-slate-50 border rounded-2xl mb-6 outline-none focus:ring-2 focus:ring-red-500">
             <div class="space-y-3">
-              <button (click)="confirmDeleteAccount()" class="w-full bg-red-600 text-white py-5 rounded-2xl font-bold">Excluir Conta</button>
-              <button (click)="closeDeleteModal()" class="w-full py-4 text-slate-500 font-bold">Cancelar</button>
+              <button (click)="confirmDeleteAccount()" class="w-full bg-red-600 text-white py-5 rounded-2xl font-bold hover:bg-red-700 transition-all">Excluir Conta</button>
+              <button (click)="closeDeleteModal()" class="w-full py-4 text-slate-500 font-bold hover:text-slate-900 transition-colors">Cancelar</button>
             </div>
          </div>
       </div>
@@ -561,6 +621,7 @@ registerLocaleData(localePt);
     .animate-fade-in { animation: fadeIn 0.4s ease-out; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     input::placeholder { color: #94a3b8; }
+    input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   `]
 })
 export class App implements OnInit {
@@ -584,6 +645,8 @@ export class App implements OnInit {
     name: '',
     municipality: '',
     state: '',
+    cnae: '',
+    secondaryCnaes: [] as string[],
     type: CompanyType.Servico,
     currentRegime: TaxRegime.Simples,
     simplesAnexo: 'Anexo III',
@@ -625,19 +688,55 @@ export class App implements OnInit {
   Plus = Plus; Scale = Scale; Briefcase = Briefcase; FileText = FileText;
   History = History; Settings = Settings; Trash2 = Trash2; Key = Key;
   Shield = Shield; MailCheck = MailCheck; DollarSign = DollarSign; PieChart = PieChart;
-  ArrowLeft = ArrowLeft;
+  ArrowLeft = ArrowLeft; MapPin = MapPin; ClipboardList = ClipboardList;
+  Wallet = Wallet; Coins = Coins;
 
   ngOnInit() {
     this.chatHistory.set([{
       role: 'model',
-      text: 'Olá! Sou seu assistente de estratégia tributária. Como posso ajudar com ISS, ICMS, Indústria ou Reforma hoje?'
+      text: 'Olá! Sou seu assistente de estratégia tributária. Como posso ajudar com sua análise financeira e projeções para 2026 hoje?'
     }]);
+  }
+
+  // Helper logic for Annexes
+  getAvailableAnnexes(): string[] {
+    const type = this.companyForm.type;
+    if (type === CompanyType.Comercio) {
+      return ['Anexo I'];
+    } else if (type === CompanyType.Industria) {
+      return ['Anexo II'];
+    } else {
+      // Serviço
+      return ['Anexo III', 'Anexo IV', 'Anexo V'];
+    }
+  }
+
+  // Update methods to ensure consistency
+  setCompanyType(type: CompanyType) {
+    this.companyForm.type = type;
+    this.ensureValidAnnex();
+  }
+
+  setTaxRegime(regime: TaxRegime) {
+    this.companyForm.currentRegime = regime;
+    this.ensureValidAnnex();
+  }
+
+  ensureValidAnnex() {
+    const available = this.getAvailableAnnexes();
+    if (!available.includes(this.companyForm.simplesAnexo)) {
+      this.companyForm.simplesAnexo = available[0];
+    }
+    // Reset Fator R if not Anexo V
+    if (this.companyForm.simplesAnexo !== 'Anexo V') {
+      this.companyForm.simplesFatorR = false;
+    }
   }
 
   // Auth Handlers
   handleLogin() {
     this.view.set('dashboard');
-    this.profileForm.name = this.authForm.name || 'Estrategista';
+    this.profileForm.name = this.authForm.name || 'Estrategista Sênior';
   }
 
   handleRegister() {
@@ -657,6 +756,8 @@ export class App implements OnInit {
       name: '',
       municipality: '',
       state: '',
+      cnae: '',
+      secondaryCnaes: [],
       type: CompanyType.Servico,
       currentRegime: TaxRegime.Simples,
       simplesAnexo: 'Anexo III',
@@ -677,8 +778,8 @@ export class App implements OnInit {
   }
 
   async searchCNPJ() {
-    if (!this.companyForm.cnpj || this.companyForm.cnpj.length < 11) {
-        alert('Por favor, insira um CNPJ válido.');
+    if (!this.companyForm.cnpj || this.companyForm.cnpj.replace(/\D/g, '').length < 14) {
+        alert('Por favor, insira um CNPJ válido de 14 dígitos.');
         return;
     }
     
@@ -688,6 +789,8 @@ export class App implements OnInit {
       this.companyForm.name = data.name;
       this.companyForm.municipality = data.municipality;
       this.companyForm.state = data.state;
+      this.companyForm.cnae = data.cnae;
+      this.companyForm.secondaryCnaes = data.secondaryCnaes;
     } catch (err) {
       alert('Erro ao buscar CNPJ. Verifique a conexão e tente novamente.');
     } finally {
@@ -708,7 +811,8 @@ export class App implements OnInit {
       simplesFatorR: this.companyForm.simplesFatorR,
       annualRevenue: this.companyForm.annualRevenue,
       payrollCosts: this.companyForm.payrollCosts,
-      cnae: '6201-5/00',
+      cnae: this.companyForm.cnae,
+      secondaryCnaes: this.companyForm.secondaryCnaes,
       suppliers: []
     };
     this.simulations.update(list => [...list, newCompany]);
@@ -718,7 +822,7 @@ export class App implements OnInit {
 
   // Profile Actions
   updateName() {
-    alert('Nome atualizado com sucesso!');
+    alert('Informações atualizadas com sucesso!');
   }
 
   requestDeleteAccount() {
@@ -733,17 +837,17 @@ export class App implements OnInit {
 
   confirmDeleteAccount() {
     if (this.deleteCodeInput === this.sentCode) {
-      alert('Sua conta foi excluída permanentemente.');
+      alert('Sua conta foi excluída permanentemente. Lamentamos vê-lo partir.');
       this.showDeleteModal.set(false);
       this.handleLogout();
     } else {
-      alert('Código inválido. Verifique seu e-mail.');
+      alert('Código inválido. Verifique o código simulado: 123456');
     }
   }
 
   // AI Actions
   async askLegislativeSummary(topic: string) {
-    this.aiQuery = `Faça um resumo técnico completo sobre a legislação de ${topic}, destacando as principais regras atuais e detalhando o impacto previsto para 2026 na Reforma Tributária (IBS/CBS/Imposto Seletivo). Mencione especificamente que no caso de ISS e ICMS o processo de extinção completa se dará somente em 2033. Cite leis específicas como LC 123, LC 116, RICMS ou RIPI onde aplicável.`;
+    this.aiQuery = `Faça um resumo técnico completo sobre a legislação de ${topic}, destacando as principais regras atuais e detalhando o impacto previsto para 2026 na Reforma Tributária (IBS/CBS/Imposto Seletivo). Mencione especificamente as datas de transição 2026-2033.`;
     await this.askAI();
   }
 
@@ -761,27 +865,22 @@ export class App implements OnInit {
         contents: userPrompt,
         config: { 
           tools: [{ googleSearch: {} }],
-          systemInstruction: `Você é um Consultor Tributário Sênior de elite especialista em legislação brasileira.
-          Domínio Técnico obrigatório:
-          1. ISS: LC 116/03, conflitos de competência e extinção para o IBS (processo final em 2033).
-          2. ICMS: Substituição tributária, Convênios CONFAZ e transição para o IBS (processo final em 2033).
-          3. IPI & Indústria: RIPI, créditos físicos/financeiros e o novo Imposto Seletivo (Sin Tax).
-          4. Simples Nacional: LC 123/06, Fator R e o regime híbrido pós-2026.
-          
-          Responda de forma executiva, baseada em lei, sempre citando os impactos da Reforma PLP 68/2024.`
+          systemInstruction: `Você é um Consultor Tributário Sênior especialista em legislação brasileira. 
+          Sua missão é explicar conceitos de ISS, ICMS, IPI e Simples Nacional com precisão técnica mas linguagem executiva. 
+          Sempre foque na Reforma Tributária 2026 e PLP 68/2024.`
         },
       });
 
-      const text = response.text || 'Não foi possível obter uma resposta técnica no momento.';
+      const text = response.text || 'Desculpe, não consegui processar essa consulta técnica no momento.';
       const rawSources = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
       const sources = rawSources.map((chunk: any) => ({
-        title: chunk.web?.title || 'Diário Oficial / Fonte Governamental',
+        title: chunk.web?.title || 'Link Oficial',
         uri: chunk.web?.uri || '#'
       }));
 
       this.chatHistory.update(h => [...h, { role: 'model', text, sources }]);
     } catch (err) {
-      this.chatHistory.update(h => [...h, { role: 'model', text: 'Erro ao consultar base de dados. Verifique sua conexão.' }]);
+      this.chatHistory.update(h => [...h, { role: 'model', text: 'Ocorreu um erro na consulta inteligente. Tente novamente mais tarde.' }]);
     } finally {
       this.isThinking.set(false);
     }
@@ -790,7 +889,7 @@ export class App implements OnInit {
   clearChat() {
     this.chatHistory.set([{ 
       role: 'model', 
-      text: 'Chat reiniciado. Como posso ajudar com sua estratégia tributária hoje?' 
+      text: 'Consultoria reiniciada. Qual tributo ou cenário deseja analisar?' 
     }]);
   }
 }
