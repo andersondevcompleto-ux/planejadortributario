@@ -1,11 +1,8 @@
 
-import { CompanyData, SimulationResult, TaxRegime, CompanyType, ScenarioResult, ServiceCategory } from './types';
+import { CompanyData, SimulationResult, TaxRegime, CompanyType, ScenarioResult, ServiceCategory, CNAE } from './types';
 
-// Mock API response delay
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Tabela de Alíquotas Internas de ICMS por Estado (Estimativa 2024/2025)
-// Usado para pré-carregar o valor correto no Onboarding e cálculos.
 export const ICMS_RATES: Record<string, number> = {
   'AC': 17, 'AL': 19, 'AM': 20, 'AP': 18, 'BA': 20.5, 'CE': 20, 'DF': 20, 'ES': 17,
   'GO': 19, 'MA': 22, 'MG': 18, 'MS': 17, 'MT': 17, 'PA': 19, 'PB': 20, 'PE': 20.5,
@@ -13,15 +10,22 @@ export const ICMS_RATES: Record<string, number> = {
   'SE': 19, 'SP': 18, 'TO': 20
 };
 
+// Helper para inferir tipo de empresa pelo código CNAE
+const inferTypeFromCNAE = (code: string): CompanyType => {
+  const prefix = parseInt(code.substring(0, 2));
+  if (prefix >= 1 && prefix <= 33) return CompanyType.Industria;
+  if (prefix >= 45 && prefix <= 47) return CompanyType.Comercio;
+  return CompanyType.Servico;
+};
+
 export const lookupCNPJ = async (cnpj: string): Promise<{ 
   name: string; 
   municipality: string; 
   state: string;
-  cnae: string;
-  secondaryCnaes: string[];
+  primaryCnae: CNAE;
+  secondaryCnaes: CNAE[];
 }> => {
-  await delay(1200); // Simula latência de consulta externa
-  // Simulação de resposta baseada no final do CNPJ
+  await delay(1200); 
   const lastDigit = parseInt(cnpj.replace(/\D/g, '').slice(-1)) || 0;
   
   const cities = [
@@ -34,29 +38,31 @@ export const lookupCNPJ = async (cnpj: string): Promise<{
   
   const location = cities[lastDigit % cities.length];
 
-  const cnaeList = [
-    '6201-5/00', '6202-3/00', '4751-2/01', '7020-4/00', '8211-3/00'
+  const primaryCnaes = [
+    { code: '6201-5/00', description: 'Desenvolvimento de programas de computador sob encomenda', type: CompanyType.Servico },
+    { code: '4751-2/01', description: 'Comércio varejista especializado de equipamentos e suprimentos de informática', type: CompanyType.Comercio },
+    { code: '1011-2/01', description: 'Frigorífico - abate de bovinos', type: CompanyType.Industria },
+    { code: '8630-5/03', description: 'Atividade médica ambulatorial restrita a consultas', type: CompanyType.Servico },
+    { code: '8513-9/00', description: 'Ensino fundamental', type: CompanyType.Servico }
+  ];
+
+  const secondaryCnaes = [
+    { code: '8219-9/99', description: 'Preparação de documentos e serviços especializados de apoio administrativo', type: CompanyType.Servico },
+    { code: '7490-1/04', description: 'Atividades de intermediação e agenciamento de serviços e negócios em geral', type: CompanyType.Servico },
+    { code: '8599-6/04', description: 'Treinamento em desenvolvimento profissional e gerencial', type: CompanyType.Servico }
   ];
 
   return {
     name: "EMPRESA MODELO ESTRATÉGICA S.A.",
     municipality: location.m,
     state: location.s,
-    cnae: cnaeList[lastDigit % cnaeList.length],
-    secondaryCnaes: [
-      '8219-9/99',
-      '7490-1/04',
-      '8599-6/04'
-    ]
+    primaryCnae: primaryCnaes[lastDigit % primaryCnaes.length],
+    secondaryCnaes: secondaryCnaes
   };
 };
 
-/**
- * TABELAS DO SIMPLES NACIONAL (Vigência 2024/2025)
- * Faixas: Limite Superior, Alíquota Nominal, Valor a Deduzir
- */
 const TABLES_SIMPLES: Record<string, { limit: number, rate: number, deduction: number }[]> = {
-  'Anexo I': [ // Comércio
+  'Anexo I': [ 
     { limit: 180000, rate: 0.04, deduction: 0 },
     { limit: 360000, rate: 0.073, deduction: 5940 },
     { limit: 720000, rate: 0.095, deduction: 13860 },
@@ -64,7 +70,7 @@ const TABLES_SIMPLES: Record<string, { limit: number, rate: number, deduction: n
     { limit: 3600000, rate: 0.143, deduction: 87300 },
     { limit: 4800000, rate: 0.19, deduction: 378000 },
   ],
-  'Anexo II': [ // Indústria
+  'Anexo II': [ 
     { limit: 180000, rate: 0.045, deduction: 0 },
     { limit: 360000, rate: 0.078, deduction: 5940 },
     { limit: 720000, rate: 0.1, deduction: 13860 },
@@ -72,7 +78,7 @@ const TABLES_SIMPLES: Record<string, { limit: number, rate: number, deduction: n
     { limit: 3600000, rate: 0.147, deduction: 85500 },
     { limit: 4800000, rate: 0.30, deduction: 720000 },
   ],
-  'Anexo III': [ // Serviços (Fator R ou Padrão)
+  'Anexo III': [ 
     { limit: 180000, rate: 0.06, deduction: 0 },
     { limit: 360000, rate: 0.112, deduction: 9360 },
     { limit: 720000, rate: 0.135, deduction: 17640 },
@@ -80,7 +86,7 @@ const TABLES_SIMPLES: Record<string, { limit: number, rate: number, deduction: n
     { limit: 3600000, rate: 0.21, deduction: 125640 },
     { limit: 4800000, rate: 0.33, deduction: 648000 },
   ],
-  'Anexo IV': [ // Serviços (Vigilância, Limpeza, Advocacia, Obras) - INSS Patronal Por Fora!
+  'Anexo IV': [ 
     { limit: 180000, rate: 0.045, deduction: 0 },
     { limit: 360000, rate: 0.09, deduction: 8100 },
     { limit: 720000, rate: 0.102, deduction: 12420 },
@@ -88,7 +94,7 @@ const TABLES_SIMPLES: Record<string, { limit: number, rate: number, deduction: n
     { limit: 3600000, rate: 0.22, deduction: 183780 },
     { limit: 4800000, rate: 0.33, deduction: 579780 },
   ],
-  'Anexo V': [ // Serviços Sujeitos a Fator R
+  'Anexo V': [ 
     { limit: 180000, rate: 0.155, deduction: 0 },
     { limit: 360000, rate: 0.18, deduction: 4500 },
     { limit: 720000, rate: 0.195, deduction: 9900 },
@@ -98,33 +104,22 @@ const TABLES_SIMPLES: Record<string, { limit: number, rate: number, deduction: n
   ]
 };
 
-/**
- * Estimativa da Parcela de Impostos de Consumo dentro do DAS (PIS/COFINS/ISS/ICMS/IPI).
- * Usado para calcular o "Simples Híbrido" na reforma.
- * O restante é considerado Renda/Folha (IRPJ, CSLL, CPP).
- */
 const SIMPLES_CONSUMPTION_SHARE: Record<string, number> = {
-  'Anexo I': 0.46, // ~34% ICMS + ~12% PIS/COFINS
-  'Anexo II': 0.52, // ~32% ICMS + ~12% PIS/COFINS + 8% IPI
-  'Anexo III': 0.48, // ~33% ISS + ~15% PIS/COFINS
-  'Anexo IV': 0.57, // ~45% ISS + ~12% PIS/COFINS (Base é menor pois não tem CPP)
-  'Anexo V': 0.28, // ~16% ISS + ~12% PIS/COFINS (Alíquota total alta devido a CPP/IRPJ)
+  'Anexo I': 0.46, 
+  'Anexo II': 0.52, 
+  'Anexo III': 0.48, 
+  'Anexo IV': 0.57, 
+  'Anexo V': 0.28, 
 };
 
-/**
- * Calcula a Alíquota Efetiva do Simples Nacional
- * Fórmula: (RBT12 * AliqNominal - ParcelaDeduzir) / RBT12
- */
 const calculateSimplesEffectiveRate = (revenue12m: number, anexo: string, payroll12m: number, subjectToFactorR: boolean): { tax: number, rate: number, explanation: string, finalAnexo: string } => {
   let finalAnexo = anexo;
   let explanation = `Cálculo base conforme ${anexo}`;
 
-  // Safe Guard for zero revenue
   if (revenue12m <= 0) {
      return { tax: 0, rate: 0, explanation: 'Sem faturamento', finalAnexo: anexo };
   }
 
-  // Lógica do Fator R
   if (subjectToFactorR) {
     const factorR = payroll12m / revenue12m;
     if (factorR >= 0.28) {
@@ -137,21 +132,12 @@ const calculateSimplesEffectiveRate = (revenue12m: number, anexo: string, payrol
   }
 
   const table = TABLES_SIMPLES[finalAnexo] || TABLES_SIMPLES['Anexo III'];
-  
-  // Encontrar faixa
   const range = table.find(r => revenue12m <= r.limit) || table[table.length - 1];
-  
-  // Cálculo Oficial
   const nominalTax = revenue12m * range.rate;
   const finalTax = Math.max(0, nominalTax - range.deduction);
   const effectiveRate = finalTax / revenue12m;
 
-  return {
-    tax: finalTax,
-    rate: effectiveRate,
-    explanation,
-    finalAnexo
-  };
+  return { tax: finalTax, rate: effectiveRate, explanation, finalAnexo };
 };
 
 export const runSimulation = (data: CompanyData): SimulationResult => {
@@ -160,9 +146,8 @@ export const runSimulation = (data: CompanyData): SimulationResult => {
   const monthlyPurchases = data.monthlyPurchases || 0;
   const annualPurchases = monthlyPurchases * 12;
 
-  // --- CALCULATE GENERAL LABOR CHARGES (Relevant for Presumido, Real AND Simples Anexo IV) ---
-  const RAT_OTHERS_RATE = 0.08; // Estimate for RAT + System S
-  const CPP_RATE_STANDARD = 0.20; // INSS Patronal
+  const RAT_OTHERS_RATE = 0.08; 
+  const CPP_RATE_STANDARD = 0.20; 
 
   let laborTaxYearly = 0;
   let laborExplanation = '';
@@ -177,30 +162,18 @@ export const runSimulation = (data: CompanyData): SimulationResult => {
      laborExplanation = `Folha (20% INSS + RAT/Terceiros)`;
   }
 
-  // --- ICMS & IPI CALCULATION ENGINE ---
-  // Default values or Look up based on state
-  let icmsInternal = 0.18; // Default
+  let icmsInternal = 0.18; 
   if (data.icmsInternalRate) {
     icmsInternal = data.icmsInternalRate / 100;
   } else if (data.state && ICMS_RATES[data.state.toUpperCase()]) {
     icmsInternal = ICMS_RATES[data.state.toUpperCase()] / 100;
   }
   
-  // If selling interstate, typical rates are 12% (normal) or 7% (to N/NE/ES) or 4% (imported)
-  // We approximate using the percentage provided
   const interstatePercent = (data.icmsInterstatePercent || 0) / 100;
   const internalPercent = 1 - interstatePercent;
-  
-  // Weighted Average ICMS Rate on Sales
-  // Ex: 80% Internal (18%) + 20% Interstate (12%)
   const avgIcmsDebitRate = (internalPercent * icmsInternal) + (interstatePercent * 0.12);
-  
-  // IPI Rate (Industry Only)
-  const ipiRate = (data.type === CompanyType.Industria && data.industryIpiRate) 
-      ? (data.industryIpiRate / 100) 
-      : 0;
+  const ipiRate = (data.type === CompanyType.Industria && data.industryIpiRate) ? (data.industryIpiRate / 100) : 0;
 
-  // --- 1. SIMPLES NACIONAL ---
   const simplesResult = calculateSimplesEffectiveRate(
     annualRevenue, 
     data.simplesAnexo || (data.type === CompanyType.Industria ? 'Anexo II' : (data.type === CompanyType.Comercio ? 'Anexo I' : 'Anexo III')), 
@@ -210,27 +183,16 @@ export const runSimulation = (data: CompanyData): SimulationResult => {
 
   let totalSimples = simplesResult.tax;
   let simplesDetails = simplesResult.explanation;
-  let simplesIncludedCPP = true;
-
-  // SPECIFIC RULE: Anexo IV DOES NOT include CPP (Payroll Tax) in the DAS.
   if (simplesResult.finalAnexo === 'Anexo IV') {
     totalSimples += laborTaxYearly;
-    simplesDetails += ' + INSS Patronal (Pago à parte no Anexo IV)';
-    simplesIncludedCPP = false;
+    simplesDetails += ' + INSS Patronal (Anexo IV)';
   } else {
-    simplesDetails += ' (INSS Patronal incluído no DAS)';
+    simplesDetails += ' (INSS Patronal incluído)';
   }
 
-  // --- 2. LUCRO PRESUMIDO (2025) ---
-  // PIS/COFINS (Cumulativo): 0.65% + 3.00% = 3.65%
-  // ISS (Serviços): Estimado em 5%
-  // ICMS (Indústria/Comércio): Não-Cumulativo (Débito - Crédito)
-  // IPI (Indústria): Não-Cumulativo (Débito - Crédito)
-  
   const pisCofinsPresumidoRate = 0.0365;
-  
-  let irpjBaseRate = 0.32; // Default Serviço
-  let csllBaseRate = 0.32; // Default Serviço
+  let irpjBaseRate = 0.32; 
+  let csllBaseRate = 0.32; 
   let isMajored = false;
   let issPresumidoYearly = 0;
   let icmsPresumidoYearly = 0;
@@ -240,317 +202,76 @@ export const runSimulation = (data: CompanyData): SimulationResult => {
   if (data.type === CompanyType.Comercio || data.type === CompanyType.Industria) {
     irpjBaseRate = 0.08;
     csllBaseRate = 0.12;
-    isMajored = false;
-    issPresumidoYearly = 0; 
-    
-    // ICMS Calculation (Simplified Non-Cumulative)
     const icmsDebit = annualRevenue * avgIcmsDebitRate;
-    // Estimate credit on purchases (Assume purchases have standard ICMS embedded)
-    // Conservatively assume 12% credit on all purchases (interstate assumption) or full internal if local
-    const icmsCreditRate = 0.12; // Average credit rate
-    const icmsCredit = annualPurchases * icmsCreditRate; 
+    const icmsCredit = annualPurchases * 0.12; 
     icmsPresumidoYearly = Math.max(0, icmsDebit - icmsCredit);
-    
-    consumptionExplanation = `ICMS: Média ${(avgIcmsDebitRate*100).toFixed(1)}% (Débito) - Crédito Compras`;
-
-    // IPI Calculation
+    consumptionExplanation = `ICMS: Média ${(avgIcmsDebitRate*100).toFixed(1)}%`;
     if (data.type === CompanyType.Industria) {
       const ipiDebit = annualRevenue * ipiRate;
-      const ipiCredit = annualPurchases * (ipiRate * 0.5); // Estimate 50% of purchases generate IPI credit
+      const ipiCredit = annualPurchases * (ipiRate * 0.5); 
       ipiPresumidoYearly = Math.max(0, ipiDebit - ipiCredit);
       consumptionExplanation += ` | IPI: ${(ipiRate*100).toFixed(1)}%`;
     }
-
   } else {
-    // É Serviço
     isMajored = true;
-    
-    // Check for Sociedade Uniprofissional (Fixed ISS)
     if (data.isSup && data.supProfessionalCount && data.supTaxAmountMonthly) {
        issPresumidoYearly = data.supProfessionalCount * data.supTaxAmountMonthly * 12;
-       consumptionExplanation = `ISS Fixo (Uniprofissional)`;
+       consumptionExplanation = `ISS Fixo`;
     } else {
-       // ISS Ad Valorem (Standard)
-       const standardIssRate = 0.05; // 5% estimate
-       issPresumidoYearly = annualRevenue * standardIssRate;
-       consumptionExplanation = `ISS (Est.): ${(standardIssRate * 100).toFixed(0)}%`;
+       issPresumidoYearly = annualRevenue * 0.05;
+       consumptionExplanation = `ISS: 5%`;
     }
   }
 
   const irpjBase = annualRevenue * irpjBaseRate;
   const csllBase = annualRevenue * csllBaseRate;
-
-  const irpjBasic = irpjBase * 0.15;
-  const irpjAdicional = Math.max(0, (irpjBase - 240000) * 0.10);
-  const totalIrpjPresumido = irpjBasic + irpjAdicional;
-  
+  const totalIrpjPresumido = (irpjBase * 0.15) + Math.max(0, (irpjBase - 240000) * 0.10);
   const csll = csllBase * 0.09;
   const pisCofinsPresumido = annualRevenue * pisCofinsPresumidoRate;
-
-  // Total Presumido
   const totalPresumido = totalIrpjPresumido + csll + pisCofinsPresumido + issPresumidoYearly + icmsPresumidoYearly + ipiPresumidoYearly + laborTaxYearly;
 
-  // --- 3. LUCRO REAL (2025) ---
-  // PIS/COFINS (Não-Cumulativo): 1.65% + 7.6% = 9.25%
-  // ICMS & IPI same logic as Presumido (Non-Cumulative state/federal rules apply equally)
-  
   const pisCofinsRealRate = 0.0925;
-  const pisCofinsDebit = annualRevenue * pisCofinsRealRate;
-  const pisCofinsCredit = annualPurchases * pisCofinsRealRate; 
-  const pisCofinsNet = Math.max(0, pisCofinsDebit - pisCofinsCredit);
+  const pisCofinsNet = Math.max(0, (annualRevenue * pisCofinsRealRate) - (annualPurchases * pisCofinsRealRate));
+  const accountingProfit = annualRevenue - annualPurchases - annualPayroll - (data.realDeductionAmount || 0);
+  const taxableProfit = Math.max(0, (accountingProfit + (data.realAdditions || 0) - (data.realExclusions || 0)));
+  const totalIrpjReal = (taxableProfit * 0.15) + Math.max(0, (taxableProfit - 240000) * 0.10);
+  const totalReal = totalIrpjReal + (taxableProfit * 0.09) + pisCofinsNet + issPresumidoYearly + icmsPresumidoYearly + ipiPresumidoYearly + laborTaxYearly;
 
-  // Accounting Profit Calculation
-  const operationalExpenses = data.realDeductionAmount || 0;
-  let accountingProfit = annualRevenue - annualPurchases - annualPayroll - operationalExpenses;
-
-  // LALUR
-  const additions = data.realAdditions || 0;
-  const exclusions = data.realExclusions || 0;
-  
-  let taxableProfitBeforeLoss = accountingProfit + additions - exclusions;
-  let lossOffset = 0;
-  if (taxableProfitBeforeLoss > 0 && data.realAccumulatedLoss && data.realAccumulatedLoss > 0) {
-     const maxOffset = taxableProfitBeforeLoss * 0.30;
-     lossOffset = Math.min(data.realAccumulatedLoss, maxOffset);
-  }
-
-  let finalTaxableProfit = taxableProfitBeforeLoss - lossOffset;
-  if (finalTaxableProfit < 0) finalTaxableProfit = 0; 
-
-  // Taxes
-  const irpjRealBasic = finalTaxableProfit * 0.15;
-  const irpjRealAdicional = Math.max(0, (finalTaxableProfit - 240000) * 0.10);
-  const totalIrpjReal = irpjRealBasic + irpjRealAdicional;
-
-  const csllReal = finalTaxableProfit * 0.09;
-  
-  let issRealYearly = 0;
-  let icmsRealYearly = 0;
-  let ipiRealYearly = 0;
-
-  if (data.type === CompanyType.Servico) {
-     if (data.isSup && data.supProfessionalCount && data.supTaxAmountMonthly) {
-        issRealYearly = data.supProfessionalCount * data.supTaxAmountMonthly * 12;
-     } else {
-        issRealYearly = annualRevenue * 0.05;
-     }
-  } else {
-     // Comercio/Industria - Logic identical to Presumido for VATs
-     const icmsDebit = annualRevenue * avgIcmsDebitRate;
-     const icmsCredit = annualPurchases * 0.12; 
-     icmsRealYearly = Math.max(0, icmsDebit - icmsCredit);
-
-     if (data.type === CompanyType.Industria) {
-        const ipiDebit = annualRevenue * ipiRate;
-        const ipiCredit = annualPurchases * (ipiRate * 0.5); 
-        ipiRealYearly = Math.max(0, ipiDebit - ipiCredit);
-     }
-  }
-
-  // Total Real
-  const totalReal = totalIrpjReal + csllReal + pisCofinsNet + issRealYearly + icmsRealYearly + ipiRealYearly + laborTaxYearly;
-  
-  const lalurDetails = `Lucro Contábil: ${accountingProfit.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}`;
-
-  // Safe division for effective rate
   const safeEffectiveRate = (tax: number) => annualRevenue > 0 ? (tax / annualRevenue) * 100 : 0;
 
-  // Ranking Current
   const currentScenarios: ScenarioResult[] = [
-    { 
-        regime: TaxRegime.Simples, 
-        taxAmountYearly: totalSimples, 
-        taxAmountMonthly: totalSimples / 12,
-        effectiveRate: safeEffectiveRate(totalSimples), 
-        creditsUsedYearly: 0,
-        details: [simplesDetails] 
-    },
-    { 
-        regime: TaxRegime.Presumido, 
-        taxAmountYearly: totalPresumido, 
-        taxAmountMonthly: totalPresumido / 12,
-        effectiveRate: safeEffectiveRate(totalPresumido), 
-        creditsUsedYearly: 0,
-        details: [`PIS/COFINS (3.65%)`, consumptionExplanation, `IRPJ/CSLL Presumido`, laborExplanation],
-        breakdown: {
-            irpj: totalIrpjPresumido / 12,
-            csll: csll / 12,
-            pisCofins: pisCofinsPresumido / 12,
-            iss: issPresumidoYearly / 12,
-            icms: icmsPresumidoYearly / 12,
-            ipi: ipiPresumidoYearly / 12,
-            laborTaxes: laborTaxYearly / 12
-        },
-        isMajored: isMajored
-    },
-    { 
-        regime: TaxRegime.Real, 
-        taxAmountYearly: totalReal, 
-        taxAmountMonthly: totalReal / 12,
-        effectiveRate: safeEffectiveRate(totalReal), 
-        creditsUsedYearly: pisCofinsCredit,
-        details: [`PIS/COFINS (9.25%)`, consumptionExplanation, lalurDetails, `Crédito PIS/COFINS: R$ ${pisCofinsCredit.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`],
-        breakdown: {
-            irpj: totalIrpjReal / 12,
-            csll: csllReal / 12,
-            pisCofins: pisCofinsNet / 12,
-            iss: issRealYearly / 12,
-            icms: icmsRealYearly / 12,
-            ipi: ipiRealYearly / 12,
-            laborTaxes: laborTaxYearly / 12
-        } 
-    },
+    { regime: TaxRegime.Simples, taxAmountYearly: totalSimples, taxAmountMonthly: totalSimples / 12, effectiveRate: safeEffectiveRate(totalSimples), creditsUsedYearly: 0, details: [simplesDetails] },
+    { regime: TaxRegime.Presumido, taxAmountYearly: totalPresumido, taxAmountMonthly: totalPresumido / 12, effectiveRate: safeEffectiveRate(totalPresumido), creditsUsedYearly: 0, details: [`PIS/COFINS Cumulativo`, consumptionExplanation], isMajored },
+    { regime: TaxRegime.Real, taxAmountYearly: totalReal, taxAmountMonthly: totalReal / 12, effectiveRate: safeEffectiveRate(totalReal), creditsUsedYearly: annualPurchases * pisCofinsRealRate, details: [`Lucro Real`, consumptionExplanation] },
   ];
   currentScenarios.sort((a, b) => a.taxAmountYearly - b.taxAmountYearly);
 
-
-  // --- 4. REFORMA TRIBUTÁRIA 2026+ (IVA DUAL - IBS/CBS) ---
-  
-  // Base Standard Rate
   let ivaRate = 0.265;
-  let reformExplanation = 'Alíquota Padrão (26.5%)';
-
-  // Apply Service Reductions
+  let reformExplanation = 'Alíquota Padrão';
   if (data.type === CompanyType.Servico && data.serviceCategory) {
-    if (data.serviceCategory === ServiceCategory.SaudeEducacao) {
-      ivaRate = ivaRate * 0.4; 
-      reformExplanation = 'Redução de 60% (Saúde/Educação)';
-    } else if (data.serviceCategory === ServiceCategory.ProfissionalLiberal) {
-      ivaRate = ivaRate * 0.7; 
-      reformExplanation = 'Redução de 30% (Prof. Liberal)';
-    }
+    if (data.serviceCategory === ServiceCategory.SaudeEducacao) { ivaRate *= 0.4; reformExplanation = 'Redução 60%'; }
+    else if (data.serviceCategory === ServiceCategory.ProfissionalLiberal) { ivaRate *= 0.7; reformExplanation = 'Redução 30%'; }
   }
 
-  // REFORM INDUSTRY SPECIFICS: Imposto Seletivo (Sin Tax)
-  // Replaces IPI for harmful goods. IPI is extinguished for everything else.
-  let impostoSeletivo = 0;
-  if (data.industryHarmfulProduct) {
-     // Estimating Sin Tax (IS) add-on
-     const isRate = 0.15; // Estimate 15% surcharge for harmful goods
-     impostoSeletivo = annualRevenue * isRate;
-     reformExplanation += ' + Imposto Seletivo (Nocivos)';
-  }
-
-  const ivaDebit = (annualRevenue - exclusions) * ivaRate; 
-
-  // Calculate Weighted Credit
-  let totalIvaCredit = 0;
-  let trackedPurchases = 0;
-  
-  if (data.suppliers && data.suppliers.length > 0) {
-    data.suppliers.forEach(sup => {
-       const supplierRate = sup.regime === TaxRegime.Simples ? 0.07 : 0.265; 
-       const yearlyAmount = sup.amount * 12;
-       totalIvaCredit += yearlyAmount * supplierRate;
-       trackedPurchases += yearlyAmount;
-    });
-  }
-
-  // Remaining purchases credit
-  const remainingPurchases = Math.max(0, annualPurchases - trackedPurchases);
-  if (remainingPurchases > 0) {
-      totalIvaCredit += remainingPurchases * 0.265; 
-  }
-
-  const totalIva = Math.max(0, ivaDebit - totalIvaCredit);
+  let impostoSeletivo = data.industryHarmfulProduct ? (annualRevenue * 0.15) : 0;
+  const totalIvaCredit = annualPurchases * 0.265;
+  const totalIva = Math.max(0, (annualRevenue * ivaRate) - totalIvaCredit);
   const totalReformLiability = totalIva + impostoSeletivo + laborTaxYearly;
 
-  // --- SIMPLES NACIONAL NA REFORMA (2 Cenários) ---
-  const reformSimplesPureTax = totalSimples;
-
-  // Simples Híbrido Calculation
-  const consumptionShare = SIMPLES_CONSUMPTION_SHARE[simplesResult.finalAnexo] || 0.48;
-  const dasTax = simplesResult.tax;
-  const dasOnly = (simplesResult.finalAnexo === 'Anexo IV') ? (totalSimples - laborTaxYearly) : totalSimples;
-  
-  const dasConsumptionPart = dasOnly * consumptionShare;
-  const dasIncomePart = dasOnly - dasConsumptionPart; 
-
-  let hybridTax = dasIncomePart + totalIva + impostoSeletivo;
-  
-  if (simplesResult.finalAnexo === 'Anexo IV') {
-     hybridTax += laborTaxYearly;
-  }
+  const hybridTax = (totalSimples * (1 - (SIMPLES_CONSUMPTION_SHARE[simplesResult.finalAnexo] || 0.48))) + totalIva + impostoSeletivo;
 
   const reformScenarios: ScenarioResult[] = [
-    { 
-        regime: TaxRegime.Simples, 
-        taxAmountYearly: reformSimplesPureTax, 
-        taxAmountMonthly: reformSimplesPureTax / 12,
-        effectiveRate: safeEffectiveRate(reformSimplesPureTax), 
-        creditsUsedYearly: 0, 
-        details: ['Mantém DAS único', 'Alerta: Gera pouco crédito para clientes B2B'] 
-    },
-    { 
-        regime: 'Simples Nacional + IVA (Híbrido)', 
-        taxAmountYearly: hybridTax, 
-        taxAmountMonthly: hybridTax / 12,
-        effectiveRate: safeEffectiveRate(hybridTax), 
-        creditsUsedYearly: totalIvaCredit, 
-        details: ['Recolhe IBS/CBS por fora', 'Ideal para prestadores B2B'] 
-    },
-    { 
-        regime: TaxRegime.IBS_CBS, 
-        taxAmountYearly: totalReformLiability, 
-        taxAmountMonthly: totalReformLiability / 12,
-        effectiveRate: safeEffectiveRate(totalReformLiability), 
-        creditsUsedYearly: totalIvaCredit,
-        details: [`IVA Estimado: ${(ivaRate*100).toFixed(1)}% (${reformExplanation})`, `Fim do IPI (Extinto)`, `Imposto Seletivo (se aplicável)`],
-        breakdown: {
-          irpj: 0, csll: 0, iva: totalIva / 12, impostoSeletivo: impostoSeletivo / 12, laborTaxes: laborTaxYearly / 12
-        }
-    }
+    { regime: TaxRegime.Simples, taxAmountYearly: totalSimples, taxAmountMonthly: totalSimples / 12, effectiveRate: safeEffectiveRate(totalSimples), creditsUsedYearly: 0, details: ['DAS Único'] },
+    { regime: 'Híbrido (Simples + IVA)', taxAmountYearly: hybridTax, taxAmountMonthly: hybridTax / 12, effectiveRate: safeEffectiveRate(hybridTax), creditsUsedYearly: totalIvaCredit, details: ['IBS/CBS por fora'] },
+    { regime: TaxRegime.IBS_CBS, taxAmountYearly: totalReformLiability, taxAmountMonthly: totalReformLiability / 12, effectiveRate: safeEffectiveRate(totalReformLiability), creditsUsedYearly: totalIvaCredit, details: [`IVA: ${(ivaRate*100).toFixed(1)}% (${reformExplanation})`] }
   ];
   reformScenarios.sort((a, b) => a.taxAmountYearly - b.taxAmountYearly);
 
-  // --- 5. RESULTADOS FINAIS ---
-
-  const currentBest = currentScenarios[0];
-  const reformBest = reformScenarios[0];
-
-  let recommendation = '';
-  
-  if (data.type === CompanyType.Industria) {
-    if (data.industryHarmfulProduct) {
-       recommendation = `Indústria de Nocivos: O novo Imposto Seletivo encarecerá sua operação na Reforma. O Simples Nacional tende a ser um refúgio tributário importante para evitar essa sobretaxa.`;
-    } else {
-       recommendation = `Indústria Geral: A extinção do IPI e a unificação do ICMS no IVA trarão simplificação radical. Seus insumos gerarão crédito pleno (IBS/CBS), favorecendo o Lucro Real ou o Regime Geral do IVA.`;
-    }
-  } else {
-    // Logic for services/commerce generic
-     if (reformBest.taxAmountYearly < currentBest.taxAmountYearly) {
-      recommendation = `Atenção: A migração para o IVA (Regime Geral) projeta uma economia.`;
-    } else {
-      recommendation = `O Simples Nacional continua sendo mais vantajoso financeiramente.`;
-    }
-  }
-
-  const dataDetails = [];
-  dataDetails.push(`Compras/mês: ${monthlyPurchases.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}`);
-  if (data.type === CompanyType.Industria) dataDetails.push(`IPI Médio: ${data.industryIpiRate}%`);
-
   return {
-    inputs: {
-      revenue: annualRevenue,
-      payroll: annualPayroll,
-      regime: data.currentRegime,
-      details: dataDetails.join(' • ')
-    },
-    currentScenario: {
-      bestRegime: currentBest.regime,
-      taxAmountMonthly: currentBest.taxAmountMonthly,
-      effectiveRate: currentBest.effectiveRate || 0,
-      creditsUsed: currentBest.creditsUsedYearly,
-      ranking: currentScenarios
-    },
-    reformScenario: {
-      bestRegime: reformBest.regime,
-      taxAmountMonthly: reformBest.taxAmountMonthly,
-      effectiveRate: reformBest.effectiveRate || 0,
-      creditsUsed: reformBest.creditsUsedYearly,
-      ranking: reformScenarios
-    },
-    recommendation,
-    savingsMonthly: Math.abs(currentBest.taxAmountMonthly - reformBest.taxAmountMonthly)
+    inputs: { revenue: annualRevenue, payroll: annualPayroll, regime: data.currentRegime, details: `Atividade: ${data.selectedCnae.description}` },
+    currentScenario: { bestRegime: currentScenarios[0].regime, taxAmountMonthly: currentScenarios[0].taxAmountMonthly, effectiveRate: currentScenarios[0].effectiveRate, creditsUsed: currentScenarios[0].creditsUsedYearly, ranking: currentScenarios },
+    reformScenario: { bestRegime: reformScenarios[0].regime, taxAmountMonthly: reformScenarios[0].taxAmountMonthly, effectiveRate: reformScenarios[0].effectiveRate, creditsUsed: reformScenarios[0].creditsUsedYearly, ranking: reformScenarios },
+    recommendation: `Para ${data.selectedCnae.description}, a estratégia sugerida foca em ${reformScenarios[0].regime}.`,
+    savingsMonthly: Math.abs(currentScenarios[0].taxAmountMonthly - reformScenarios[0].taxAmountMonthly)
   };
 };

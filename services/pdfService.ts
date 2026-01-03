@@ -1,3 +1,4 @@
+
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import { CompanyData, SimulationResult } from '../components/types';
@@ -33,7 +34,8 @@ export const generatePDF = (company: CompanyData, result: SimulationResult) => {
   doc.text(`Faturamento Anual: R$ ${company.annualRevenue.toLocaleString('pt-BR')}`, 20, 75);
   doc.text(`Folha de Pagamento: R$ ${company.payrollCosts.toLocaleString('pt-BR')}`, 120, 75);
   doc.text(`Regime Atual: ${company.currentRegime}`, 20, 80);
-  doc.text(`Atividade (CNAE): ${company.cnae || 'Não informado'}`, 120, 80);
+  // Fix: Property 'cnae' does not exist on type 'CompanyData'. Using 'selectedCnae.code' instead.
+  doc.text(`Atividade (CNAE): ${company.selectedCnae?.code || 'Não informado'}`, 120, 80);
 
   // Recommendation
   doc.setFillColor(240, 253, 244); // Green 50

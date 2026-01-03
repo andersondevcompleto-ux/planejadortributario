@@ -1,3 +1,4 @@
+
 import { describe, it, expect } from 'vitest';
 import { runSimulation } from '../../components/taxService';
 import { CompanyData, CompanyType, TaxRegime, ServiceCategory } from '../../components/types';
@@ -8,7 +9,12 @@ describe('TaxService Engine', () => {
     name: 'Test Corp',
     municipality: 'São Paulo',
     state: 'SP',
-    cnae: '6201-5/00',
+    // Fix: Object literal may only specify known properties, and 'cnae' does not exist in type 'CompanyData'.
+    selectedCnae: { 
+      code: '6201-5/00', 
+      description: 'Desenvolvimento de programas de computador sob encomenda', 
+      type: CompanyType.Servico 
+    },
     type: CompanyType.Servico,
     currentRegime: TaxRegime.Presumido,
     annualRevenue: 1000000, // 1 Milhão

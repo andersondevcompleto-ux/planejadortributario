@@ -20,6 +20,12 @@ export enum ServiceCategory {
   ProfissionalLiberal = 'Profissional Liberal (Redução 30%)',
 }
 
+export interface CNAE {
+  code: string;
+  description: string;
+  type: CompanyType;
+}
+
 export interface Supplier {
   id: string;
   cnpj: string;
@@ -38,73 +44,64 @@ export interface CompanyData {
   name: string;
   municipality: string;
   state: string;
-  cnae: string; // CNAE Principal
-  secondaryCnaes?: string[]; // CNAEs Secundários
+  selectedCnae: CNAE;
+  secondaryCnaes?: CNAE[];
   type: CompanyType;
-  // NEW: Service Sub-category for Reform calculation
   serviceCategory?: ServiceCategory;
   
   currentRegime: TaxRegime;
   annualRevenue: number;
-  payrollCosts: number; // For Fator R calculation in Simples
+  payrollCosts: number;
   isPremium?: boolean;
   
-  // Specific fields for Simples Nacional
   simplesAnexo?: string;
   simplesFatorR?: boolean;
 
-  // Specific fields for Lucro Real (LALUR Logic)
-  realHasDeductions?: boolean; // Deprecated in UI, kept for compatibility, prefer using realExclusions below
-  realDeductionAmount?: number; // General operational expenses to find accounting profit
+  realDeductionAmount?: number; 
   realPaymentMode?: 'Trimestral' | 'Estimativa Mensal';
   
-  // NEW: LALUR Fields
-  realAdditions?: number; // Despesas Indedutíveis (Multas, Brindes, etc)
-  realExclusions?: number; // Receitas não tributáveis ou Incentivos Fiscais (Lei 14.789/23)
-  realAccumulatedLoss?: number; // Prejuízo Fiscal de exercícios anteriores (Trava 30%)
+  realAdditions?: number; 
+  realExclusions?: number; 
+  realAccumulatedLoss?: number; 
 
-  // Sociedade Uniprofissional (ISS Fixo)
   isSup?: boolean;
-  supProfessionalCount?: number; // Number of partners/employees authorized
-  supTaxAmountMonthly?: number; // Fixed monthly tax per professional
+  supProfessionalCount?: number; 
+  supTaxAmountMonthly?: number; 
 
-  // Desoneração da Folha (CPRB) - Applicable to Presumido/Real
   isDesonerada?: boolean;
-  cprbRate?: number; // Alíquota sobre a receita (1% a 4.5%)
+  cprbRate?: number; 
 
-  // Purchasing & Supplier Data
-  monthlyPurchases?: number; // Total monthly purchases
-  suppliers: Supplier[]; // List of specific suppliers
+  monthlyPurchases?: number; 
+  suppliers: Supplier[];
 
-  // --- NEW FIELDS FOR INDUSTRY & ICMS (2026 UPDATE) ---
-  industryIpiRate?: number; // Alíquota média de IPI (ex: 5%, 10%)
-  industryHarmfulProduct?: boolean; // Se produz bens sujeitos a Imposto Seletivo (Cigarro, Bebida, Minério)
-  icmsInterstatePercent?: number; // % das vendas para fora do estado (Impacta alíquota média 12% ou 7%)
-  icmsInternalRate?: number; // Alíquota interna padrão (17%, 18%, 20% dependendo do estado)
-  icmsTaxIncentive?: boolean; // Se possui benefício fiscal (Ex: Redução de Base de Cálculo)
+  industryIpiRate?: number; 
+  industryHarmfulProduct?: boolean; 
+  icmsInterstatePercent?: number; 
+  icmsInternalRate?: number; 
+  icmsTaxIncentive?: boolean; 
 }
 
 export interface ScenarioBreakdown {
   irpj: number;
   csll: number;
   pisCofins?: number;
-  iss?: number; // Municipal Service Tax
-  icms?: number; // State Value Added Tax (NEW)
-  ipi?: number; // Federal Industrial Tax (NEW)
-  iva?: number; // IBS/CBS
-  impostoSeletivo?: number; // Sin Tax 2026
-  laborTaxes?: number; // INSS Patronal + RAT + Terceiros OR CPRB
+  iss?: number; 
+  icms?: number; 
+  ipi?: number; 
+  iva?: number; 
+  impostoSeletivo?: number; 
+  laborTaxes?: number; 
 }
 
 export interface ScenarioResult {
   regime: string;
   taxAmountYearly: number;
-  taxAmountMonthly: number; // NEW: Monthly Tax
+  taxAmountMonthly: number; 
   effectiveRate: number;
-  creditsUsedYearly: number; // NEW: Value of tax credits used
+  creditsUsedYearly: number; 
   details: string[]; 
-  breakdown?: ScenarioBreakdown; // Details for IRPJ/CSLL
-  isMajored?: boolean; // NEW: Flag for Profit Presumption Majoration
+  breakdown?: ScenarioBreakdown; 
+  isMajored?: boolean; 
 }
 
 export interface SimulationResult {
@@ -116,20 +113,20 @@ export interface SimulationResult {
   };
   currentScenario: {
     bestRegime: string;
-    taxAmountMonthly: number; // Display monthly in dashboard
+    taxAmountMonthly: number; 
     effectiveRate: number;
     creditsUsed: number;
     ranking: ScenarioResult[];
   };
   reformScenario: {
     bestRegime: string;
-    taxAmountMonthly: number; // Display monthly in dashboard
+    taxAmountMonthly: number; 
     effectiveRate: number;
     creditsUsed: number;
     ranking: ScenarioResult[];
   };
   recommendation: string;
-  savingsMonthly: number; // Monthly savings
+  savingsMonthly: number; 
 }
 
 export interface HistoryEntry {
