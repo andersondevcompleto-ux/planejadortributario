@@ -1,4 +1,3 @@
-
 import '@angular/compiler';
 import 'zone.js';
 import { bootstrapApplication } from '@angular/platform-browser';
@@ -42,7 +41,12 @@ import {
   Scale,
   Briefcase,
   FileText,
-  History
+  History,
+  Settings,
+  Trash2,
+  Key,
+  Shield,
+  MailCheck
 } from 'lucide-angular';
 
 import { CompanyData, CompanyType, TaxRegime, ViewState, SimulationResult } from './components/types';
@@ -343,6 +347,9 @@ registerLocaleData(localePt);
             <button (click)="activeTab.set('ai')" [class.bg-white]="activeTab() === 'ai'" [class.shadow-sm]="activeTab() === 'ai'" class="text-xs font-bold flex items-center gap-2 px-4 py-2 rounded-lg transition-all">
                <lucide-icon [name]="Scale" class="h-3.5 w-3.5" [class.text-brand-600]="activeTab() === 'ai'"></lucide-icon> Consultoria & Leis
             </button>
+            <button (click)="activeTab.set('profile')" [class.bg-white]="activeTab() === 'profile'" [class.shadow-sm]="activeTab() === 'profile'" class="text-xs font-bold flex items-center gap-2 px-4 py-2 rounded-lg transition-all">
+               <lucide-icon [name]="Settings" class="h-3.5 w-3.5" [class.text-brand-600]="activeTab() === 'profile'"></lucide-icon> Perfil
+            </button>
           </div>
           <button (click)="handleLogout()" class="text-slate-500 font-bold text-sm flex items-center hover:text-red-500 transition-colors">
             <lucide-icon [name]="LogOut" class="h-4 w-4 mr-1"></lucide-icon> Sair
@@ -540,7 +547,104 @@ registerLocaleData(localePt);
             </div>
           </div>
 
+          <!-- Aba de Perfil -->
+          <div *ngIf="activeTab() === 'profile'" class="animate-fade-in max-w-4xl mx-auto space-y-8">
+             <div class="flex items-center gap-4 mb-2">
+                <div class="bg-brand-100 p-4 rounded-3xl"><lucide-icon [name]="User" class="h-8 w-8 text-brand-600"></lucide-icon></div>
+                <div>
+                  <h1 class="text-3xl font-black text-slate-900">Meu Perfil</h1>
+                  <p class="text-slate-500">Gerencie suas informações e segurança da conta.</p>
+                </div>
+             </div>
+
+             <!-- Informações Gerais -->
+             <div class="bg-white rounded-[2.5rem] border p-8 shadow-sm">
+                <h3 class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
+                  <lucide-icon [name]="Briefcase" class="h-5 w-5 text-brand-600"></lucide-icon> Informações da Conta
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div class="space-y-2">
+                    <label class="text-xs font-bold text-slate-500 uppercase">Nome Completo</label>
+                    <input type="text" [(ngModel)]="profileForm.name" class="w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-brand-500 transition-all">
+                  </div>
+                  <div class="space-y-2">
+                    <label class="text-xs font-bold text-slate-500 uppercase">E-mail (Não alterável)</label>
+                    <input type="email" [value]="authForm.email" disabled class="w-full p-4 bg-slate-100 border rounded-2xl text-slate-400 cursor-not-allowed">
+                  </div>
+                </div>
+                <div class="mt-8 flex justify-end">
+                   <button (click)="updateName()" class="bg-brand-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-brand-700 transition-all">Salvar Alterações</button>
+                </div>
+             </div>
+
+             <!-- Segurança -->
+             <div class="bg-white rounded-[2.5rem] border p-8 shadow-sm">
+                <h3 class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
+                  <lucide-icon [name]="Key" class="h-5 w-5 text-brand-600"></lucide-icon> Alterar Senha
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div class="space-y-2">
+                    <label class="text-xs font-bold text-slate-500 uppercase">Senha Atual</label>
+                    <input type="password" [(ngModel)]="profileForm.currentPass" class="w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-brand-500 transition-all">
+                  </div>
+                  <div class="space-y-2">
+                    <label class="text-xs font-bold text-slate-500 uppercase">Nova Senha</label>
+                    <input type="password" [(ngModel)]="profileForm.newPass" class="w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-brand-500 transition-all">
+                  </div>
+                  <div class="space-y-2">
+                    <label class="text-xs font-bold text-slate-500 uppercase">Confirmar Nova Senha</label>
+                    <input type="password" [(ngModel)]="profileForm.confirmPass" class="w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-brand-500 transition-all">
+                  </div>
+                </div>
+                <div class="mt-8 flex justify-end">
+                   <button (click)="updatePassword()" class="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-slate-800 transition-all">Atualizar Senha</button>
+                </div>
+             </div>
+
+             <!-- Zona de Perigo -->
+             <div class="bg-red-50 rounded-[2.5rem] border border-red-100 p-8 shadow-sm">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div>
+                    <h3 class="text-lg font-bold text-red-800 mb-2 flex items-center gap-2">
+                      <lucide-icon [name]="Trash2" class="h-5 w-5"></lucide-icon> Excluir Conta
+                    </h3>
+                    <p class="text-sm text-red-600/70">Esta ação é permanente. Todos os seus dados de simulações e empresas serão deletados imediatamente.</p>
+                  </div>
+                  <button (click)="requestDeleteAccount()" class="bg-red-600 text-white px-8 py-4 rounded-2xl font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-200">Excluir Minha Conta</button>
+                </div>
+             </div>
+          </div>
+
         </div>
+      </div>
+
+      <!-- Modal de Exclusão com Código -->
+      <div *ngIf="showDeleteModal()" class="fixed inset-0 z-[100] flex items-center justify-center p-6">
+         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" (click)="closeDeleteModal()"></div>
+         <div class="bg-white w-full max-w-md rounded-[3rem] p-10 relative z-10 shadow-2xl animate-fade-in border border-slate-100">
+            <div class="bg-red-50 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6">
+               <lucide-icon [name]="MailCheck" class="text-red-600 h-10 w-10"></lucide-icon>
+            </div>
+            <h2 class="text-2xl font-black text-center text-slate-900 mb-4">Confirmação de Segurança</h2>
+            <p class="text-center text-slate-500 mb-8 leading-relaxed">Enviamos um código de 6 dígitos para seu e-mail corporativo. Insira-o abaixo para confirmar a exclusão.</p>
+            
+            <div class="flex gap-2 justify-center mb-8">
+               <input 
+                 type="text" 
+                 maxlength="6" 
+                 [(ngModel)]="deleteCodeInput" 
+                 placeholder="000000" 
+                 class="w-full p-5 text-center text-3xl font-black tracking-[1em] bg-slate-50 border rounded-2xl focus:ring-2 focus:ring-red-500 outline-none transition-all">
+            </div>
+
+            <div class="space-y-3">
+              <button (click)="confirmDeleteAccount()" [disabled]="deleteCodeInput.length < 6" class="w-full bg-red-600 text-white py-5 rounded-2xl font-bold text-lg hover:bg-red-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2">
+                Excluir Definitivamente
+              </button>
+              <button (click)="closeDeleteModal()" class="w-full py-4 text-slate-500 font-bold hover:text-slate-700 transition-all">Cancelar</button>
+            </div>
+            <p class="text-[10px] text-center text-slate-400 mt-6 uppercase font-bold tracking-widest">Atenção: Não há volta após este passo.</p>
+         </div>
       </div>
 
     </div>
@@ -555,7 +659,7 @@ registerLocaleData(localePt);
 })
 export class App implements OnInit {
   view = signal<ViewState>('landing');
-  activeTab = signal<'overview' | 'ai'>('overview');
+  activeTab = signal<'overview' | 'ai' | 'profile'>('overview');
   
   // Auth State
   isAuthenticating = signal(false);
@@ -565,6 +669,19 @@ export class App implements OnInit {
     email: '',
     password: ''
   };
+
+  // Profile Form State
+  profileForm = {
+    name: '',
+    currentPass: '',
+    newPass: '',
+    confirmPass: ''
+  };
+
+  // Account Deletion State
+  showDeleteModal = signal(false);
+  deleteCodeInput = '';
+  sentCode = '123456'; // Código simulado
 
   // AI State
   aiQuery = '';
@@ -584,7 +701,8 @@ export class App implements OnInit {
   User = User; Eye = Eye; EyeOff = EyeOff; Clock = Clock; Zap = Zap;
   ShieldCheck = ShieldCheck; TrendingUp = TrendingUp; Tag = Tag; Gift = Gift;
   Plus = Plus; Scale = Scale; Briefcase = Briefcase; FileText = FileText;
-  History = History;
+  History = History; Settings = Settings; Trash2 = Trash2; Key = Key;
+  Shield = Shield; MailCheck = MailCheck;
 
   ngOnInit() {
     this.chatHistory.set([{
@@ -599,6 +717,7 @@ export class App implements OnInit {
     setTimeout(() => {
       this.isAuthenticating.set(false);
       this.view.set('dashboard');
+      this.profileForm.name = this.authForm.name || 'Estrategista';
     }, 1500);
   }
 
@@ -608,6 +727,7 @@ export class App implements OnInit {
     setTimeout(() => {
       this.isAuthenticating.set(false);
       this.view.set('onboarding');
+      this.profileForm.name = this.authForm.name;
     }, 2000);
   }
 
@@ -615,6 +735,48 @@ export class App implements OnInit {
     this.view.set('landing');
     this.authForm = { name: '', email: '', password: '' };
     this.simulations.set([]);
+  }
+
+  // Profile Actions
+  updateName() {
+    if (!this.profileForm.name.trim()) return;
+    this.authForm.name = this.profileForm.name;
+    alert('Nome atualizado com sucesso!');
+  }
+
+  updatePassword() {
+    if (!this.profileForm.currentPass || !this.profileForm.newPass) {
+       alert('Preencha os campos de senha.');
+       return;
+    }
+    if (this.profileForm.newPass !== this.profileForm.confirmPass) {
+       alert('As novas senhas não coincidem.');
+       return;
+    }
+    alert('Senha alterada com sucesso!');
+    this.profileForm.currentPass = '';
+    this.profileForm.newPass = '';
+    this.profileForm.confirmPass = '';
+  }
+
+  requestDeleteAccount() {
+    this.showDeleteModal.set(true);
+    console.log('Código enviado para e-mail:', this.sentCode);
+  }
+
+  closeDeleteModal() {
+    this.showDeleteModal.set(false);
+    this.deleteCodeInput = '';
+  }
+
+  confirmDeleteAccount() {
+    if (this.deleteCodeInput === this.sentCode) {
+      alert('Sua conta e todos os dados foram removidos permanentemente.');
+      this.showDeleteModal.set(false);
+      this.handleLogout();
+    } else {
+      alert('Código inválido. Verifique seu e-mail.');
+    }
   }
 
   async askLegislativeSummary(topic: string) {
