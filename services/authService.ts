@@ -1,7 +1,7 @@
 
 /**
  * AuthService
- * Gerencia o registro e login de usuários com persistência em localStorage.
+ * Gerencia o registro, login e persistência de sessão de usuários.
  */
 
 export interface UserAccount {
@@ -13,21 +13,40 @@ export interface UserAccount {
 }
 
 export class AuthService {
-  private STORAGE_KEY = 'tax_strategist_users';
+  private USERS_KEY = 'tax_strategist_users';
+  private SESSION_KEY = 'tax_strategist_session';
 
   private getUsers(): UserAccount[] {
-    const data = localStorage.getItem(this.STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
+    try {
+      const data = localStorage.getItem(this.USERS_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      console.error('Erro ao ler usuários do localStorage', e);
+      return [];
+    }
   }
 
   private saveUsers(users: UserAccount[]) {
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(users));
+    try {
+      localStorage.setItem(this.USERS_KEY, JSON.stringify(users));
+    } catch (e) {
+      console.error('Erro ao salvar usuários no localStorage', e);
+    }
   }
 
   /**
-   * Registra um novo usuário.
-   * Valida se o e-mail já existe e se as senhas coincidem.
+   * Verifica se a senha atende aos requisitos de segurança:
+   * - Mínimo 8 caracteres
+   * - Pelo menos uma letra maiúscula
+   * - Pelo menos um número
    */
+  validatePasswordComplexity(password: string): { isValid: boolean; error?: string } {
+    if (password.length < 8) return { isValid: false, error: 'A senha deve ter pelo menos 8 caracteres.' };
+    if (!/[A-Z]/.test(password)) return { isValid: false, error: 'A senha deve conter pelo menos uma letra maiúscula.' };
+    if (!/[0-9]/.test(password)) return { isValid: false, error: 'A senha deve conter pelo menos um número.' };
+    return { isValid: true };
+  }
+
   register(userData: UserAccount): { success: boolean; message: string } {
     if (!userData.email || !userData.password || !userData.name || !userData.confirmPassword) {
       return { success: false, message: 'Todos os campos são obrigatórios.' };
@@ -37,48 +56,63 @@ export class AuthService {
       return { success: false, message: 'As senhas não coincidem.' };
     }
 
-    if (userData.password.length < 6) {
-      return { success: false, message: 'A senha deve ter pelo menos 6 caracteres.' };
+    const complexity = this.validatePasswordComplexity(userData.password);
+    if (!complexity.isValid) {
+      return { success: false, message: complexity.error! };
     }
 
-    if (!userData.email.includes('@')) {
-      return { success: false, message: 'E-mail inválido.' };
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(userData.email)) {
+      return { success: false, message: 'Formato de e-mail inválido.' };
     }
 
     const users = this.getUsers();
-    if (users.find(u => u.email === userData.email)) {
+    if (users.find(u => u.email.toLowerCase() === userData.email.toLowerCase())) {
       return { success: false, message: 'Este e-mail já está em uso.' };
     }
 
-    // Remove confirmPassword before saving
     const { confirmPassword: _, ...userToSave } = userData;
-    
-    users.push({
+    const newUser = {
       ...userToSave,
+      email: userToSave.email.toLowerCase(),
       createdAt: new Date().toISOString()
-    });
+    };
 
+    users.push(newUser);
     this.saveUsers(users);
+    
+    console.log('Usuário registrado com sucesso:', newUser.email);
     return { success: true, message: 'Conta criada com sucesso!' };
   }
 
-  /**
-   * Realiza o login do usuário.
-   */
   login(email: string, password: string): { success: boolean; user?: UserAccount; message: string } {
     if (!email || !password) {
       return { success: false, message: 'E-mail e senha são obrigatórios.' };
     }
 
     const users = this.getUsers();
-    const user = users.find(u => u.email === email && u.password === password);
+    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
 
     if (!user) {
       return { success: false, message: 'E-mail ou senha incorretos.' };
     }
 
-    // Remove password for security before returning user object
-    const { password: _, confirmPassword: __, ...safeUser } = user;
+    const { password: _, ...safeUser } = user;
+    localStorage.setItem(this.SESSION_KEY, JSON.stringify(safeUser));
+    
     return { success: true, user: safeUser as UserAccount, message: 'Login bem-sucedido!' };
+  }
+
+  logout() {
+    localStorage.removeItem(this.SESSION_KEY);
+  }
+
+  getCurrentUser(): UserAccount | null {
+    const session = localStorage.getItem(this.SESSION_KEY);
+    return session ? JSON.parse(session) : null;
+  }
+
+  isAuthenticated(): boolean {
+    return !!this.getCurrentUser();
   }
 }
